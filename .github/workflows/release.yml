@@ -38,7 +38,7 @@ jobs:
             exit 1
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "zip=claude-account-switcher-$TAG.zip" >> "$GITHUB_OUTPUT"
+          echo "zip=claude-account-manager-$TAG.zip" >> "$GITHUB_OUTPUT"
 
       - run: npm run build
 

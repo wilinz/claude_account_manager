@@ -5,7 +5,7 @@ export default defineManifest({
   manifest_version: 3,
   // 扩展列表里的名称和说明由 Chrome 按浏览器界面语言取，跟扩展自己的语言设置无关，
   // 所以这里固定用英文 —— 界面内的中文名在 i18n 的 common.extName
-  name: 'Claude Account Switcher',
+  name: 'Claude Account Manager',
   version: pkg.version,
   description: pkg.description,
   default_locale: undefined,
@@ -28,7 +28,7 @@ export default defineManifest({
 
   action: {
     default_popup: 'src/popup/index.html',
-    default_title: 'Claude Account Switcher',
+    default_title: 'Claude Account Manager',
   },
 
   background: {

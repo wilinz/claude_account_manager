@@ -5,7 +5,7 @@ export const en: Strings = {
   langName: { auto: 'Follow browser', zh: '中文', en: 'English' },
 
   common: {
-    extName: 'Claude Account Switcher',
+    extName: 'Claude Account Manager',
     cancel: 'Cancel',
     save: 'Save',
     clear: 'Clear',
@@ -316,7 +316,7 @@ export const en: Strings = {
     usageFailed: (detail: string) => `Could not read usage (${detail})`,
     noneSelected: 'No accounts selected',
     badgeTitle: (label: string | undefined) =>
-      label ? `Claude Account Switcher — ${label}` : 'Claude Account Switcher — signed out',
+      label ? `Claude Account Manager — ${label}` : 'Claude Account Manager — signed out',
     unknownMessage: (type: string) =>
       `The background does not recognize this message type: ${type}. Most likely the extension code was updated without being reloaded — reload it on chrome://extensions.`,
   },

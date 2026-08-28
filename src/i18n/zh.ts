@@ -8,7 +8,7 @@ export const zh = {
   langName: { auto: '跟随浏览器', zh: '中文', en: 'English' },
 
   common: {
-    extName: 'Claude 账号切换器',
+    extName: 'Claude 账号管理器',
     cancel: '取消',
     save: '保存',
     clear: '清除',
@@ -307,7 +307,7 @@ export const zh = {
     usageFailed: (detail: string) => `拿不到用量（${detail}）`,
     noneSelected: '没有选中任何账号',
     badgeTitle: (label: string | undefined) =>
-      label ? `Claude 账号切换器 — ${label}` : 'Claude 账号切换器 — 未登录',
+      label ? `Claude 账号管理器 — ${label}` : 'Claude 账号管理器 — 未登录',
     unknownMessage: (type: string) =>
       `后台不认识这个消息类型：${type}。多半是扩展代码更新了但没重新加载，去 chrome://extensions 重新加载一次。`,
   },

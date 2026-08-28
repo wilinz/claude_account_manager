@@ -1,4 +1,4 @@
-# Claude 账号切换器
+# Claude 账号管理器
 
 <p>
   <a href="https://github.com/wilinz/claude_account_manager/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/wilinz/claude_account_manager/actions/workflows/ci.yml/badge.svg"></a>
@@ -32,7 +32,7 @@ MV3 + TypeScript + React + Vite + CRXJS。数据只存在本地，不发往任�
 
 **用发行版（推荐）**
 
-1. 从 [Releases](https://github.com/wilinz/claude_account_manager/releases/latest) 下载 `claude-account-switcher-vX.Y.Z.zip` 并解压
+1. 从 [Releases](https://github.com/wilinz/claude_account_manager/releases/latest) 下载 `claude-account-manager-vX.Y.Z.zip` 并解压
 2. Chrome → `chrome://extensions` → 打开右上角「开发者模式」
 3. 「加载已解压的扩展程序」→ 选中解压出来的目录
 
@@ -48,7 +48,7 @@ npm run build   # 产物在 dist/，加载这个目录
 ```bash
 npm run dev     # HMR，产物同样在 dist/
 npm run build   # 生产构建（先跑 tsc --noEmit）
-npm run zip     # 打包成 claude-account-switcher.zip
+npm run zip     # 打包成 claude-account-manager.zip
 ```
 
 改了 service worker 的代码要在 `chrome://extensions` 重新加载扩展才生效。弹窗每次打开都重读文件、SW 不会——所以弹窗里内置了构建戳比对，两边对不上会在顶部压一条橙色横幅提醒你重载。

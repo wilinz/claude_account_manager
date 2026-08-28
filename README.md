@@ -1,4 +1,4 @@
-# Claude Account Switcher
+# Claude Account Manager
 
 <p>
   <a href="https://github.com/wilinz/claude_account_manager/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/wilinz/claude_account_manager/actions/workflows/ci.yml/badge.svg"></a>
@@ -32,7 +32,7 @@ MV3 + TypeScript + React + Vite + CRXJS. Everything stays on your machine; nothi
 
 **From a release (recommended)**
 
-1. Download `claude-account-switcher-vX.Y.Z.zip` from [Releases](https://github.com/wilinz/claude_account_manager/releases/latest) and unzip it
+1. Download `claude-account-manager-vX.Y.Z.zip` from [Releases](https://github.com/wilinz/claude_account_manager/releases/latest) and unzip it
 2. Chrome → `chrome://extensions` → enable **Developer mode** (top right)
 3. **Load unpacked** → select the unzipped folder
 
@@ -48,7 +48,7 @@ npm run build   # output lands in dist/ — load that folder
 ```bash
 npm run dev     # HMR; output also in dist/
 npm run build   # production build (runs tsc --noEmit first)
-npm run zip     # packs dist/ into claude-account-switcher.zip
+npm run zip     # packs dist/ into claude-account-manager.zip
 ```
 
 Changes to the service worker only take effect after you reload the extension on `chrome://extensions`. The popup re-reads its files every time it opens, the service worker does not — so the popup compares build stamps with the background and shows an orange banner when they disagree.

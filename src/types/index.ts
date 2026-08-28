@@ -91,6 +91,11 @@ export interface CurrentState {
 
 /* ---------- 导入 / 导出 ---------- */
 
+/*
+ * 写进每个备份文件、导入时逐字比对。扩展 0.3.0 改名成「账号管理器」时
+ * 特意没跟着改：改了的话之前导出的所有备份都会被当成「不认识的文件格式」拒掉。
+ * 这是数据格式的名字，不是产品名。
+ */
 export const EXPORT_FORMAT = 'claude-account-switcher'
 export const EXPORT_VERSION = 1
 
@@ -273,7 +278,10 @@ export type TabMessage = PromptPickerMessage | PurgeSiteDataMessage
 
 /* ---------- 退出登录拦截（MAIN world <-> content script） ---------- */
 
-/** 页面世界注入脚本的标识，收消息时用来筛掉无关的 postMessage */
+/**
+ * 页面世界注入脚本的标识，收消息时用来筛掉无关的 postMessage。
+ * 两端各写一份（另一份在 public/logout-guard.js），改名得两边一起改，否则消息对不上。
+ */
 export const LOGOUT_GUARD_SOURCE = 'claude-account-switcher:guard'
 export const LOGOUT_HOST_SOURCE = 'claude-account-switcher:host'
 

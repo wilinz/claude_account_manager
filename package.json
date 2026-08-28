@@ -1,7 +1,7 @@
 {
   "name": "claude_account_manager",
-  "displayName": "Claude Account Switcher",
-  "version": "0.2.2",
+  "displayName": "Claude Account Manager",
+  "version": "0.3.0",
   "description": "Manage several claude.ai accounts in one browser: sessions are captured automatically, switch with one click, and saved accounts appear on the login page.",
   "type": "module",
   "private": true,
@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "zip": "npm run build && cd dist && zip -r ../claude-account-switcher.zip ."
+    "zip": "npm run build && cd dist && zip -r ../claude-account-manager.zip ."
   },
   "dependencies": {
     "react": "^19.2.0",
