@@ -76,9 +76,12 @@ export const en: Strings = {
       autoOffNoSnapshot: 'Auto-capture is off · this session has no snapshot',
     },
     actions: {
-      add: '＋ Add account',
-      saveSession: 'Save current session',
-      logout: 'Log out of this account',
+      add: '＋ Add',
+      addTitle: 'Save the current session, then open the login page to add another account',
+      saveSession: 'Save session',
+      saveSessionTitle: 'Snapshot the current session into its account',
+      logout: 'Log out',
+      logoutTitle: 'Clears local cookies only — the snapshot is kept, so you can switch back',
     },
     transfer: {
       section: 'Import & export',

@@ -12,7 +12,7 @@ A Chrome extension for juggling several claude.ai accounts in one browser. Keep 
 
 MV3 + TypeScript + React + Vite + CRXJS. Everything stays on your machine; nothing is sent to a third party.
 
-![Popup and usage overview](docs/screenshot.png)
+![Popup and usage overview](docs/screenshot-en.png)
 
 > Left: per-account quota overview — each account is queried with its own session, and the account you are logged in as never changes. Right: the popup's account list, with renewal dates and session status. (Account details in the screenshot are redacted.)
 

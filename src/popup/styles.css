@@ -54,10 +54,13 @@ body {
 
 /* 三个按钮一行等分。360px 减去内边距和间距还有约 316px，一个 105px，
    放得下四五个汉字加边距 */
-.actions { flex: 0 0 auto; display: flex; gap: 6px; padding: 12px 16px 8px; }
+/* 三个按钮平分一行。文案长度跟语言走，挤不下时让最后一个换到第二行，
+   而不是 nowrap + min-width:0 那样把字直接顶出按钮外面 */
+.actions { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px 8px; }
 .actions button {
-  flex: 1 1 0; min-width: 0; white-space: nowrap;
+  flex: 1 1 auto; min-width: 92px;
   padding: 7px 6px; font-size: 12.5px;
+  text-align: center; overflow-wrap: anywhere;
 }
 button {
   font: inherit; cursor: pointer; border-radius: 8px;
@@ -102,7 +105,7 @@ button.primary:hover:not(:disabled) { filter: brightness(1.06); }
 
 /* 多了「订阅」之后按钮组更宽了；空间不够时整组换到下一行右对齐，
    而不是把邮箱挤成三个点 */
-.row-actions { display: flex; gap: 4px; flex: 0 0 auto; margin-left: auto; }
+.row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; flex: 0 0 auto; margin-left: auto; }
 .mini { padding: 4px 8px; font-size: 11.5px; border-radius: 6px; }
 .mini.ghost { border-color: transparent; color: var(--muted); }
 .mini.danger:hover:not(:disabled) { color: #d1453b; }
@@ -153,13 +156,14 @@ button.primary:hover:not(:disabled) { filter: brightness(1.06); }
 /* ---- 多选工具条 ---- */
 .selectbar {
   flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  /* 「导出所选 / 删除所选」在英文下明显更宽，挤不下就换行，别把计数顶出去 */
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
   padding: 6px 16px; border-top: 1px solid var(--line);
   font-size: 12px; color: var(--muted);
 }
 .selectall { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .selectall input { accent-color: var(--accent); margin: 0; }
-.selectbar-actions { display: flex; gap: 4px; }
+.selectbar-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .pick { flex: 0 0 auto; accent-color: var(--accent); margin: 0 2px 0 0; cursor: pointer; }
 

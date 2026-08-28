@@ -1,7 +1,7 @@
 {
   "name": "claude-web-toolbox",
   "displayName": "Claude Account Switcher",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "claude.ai 多账号管理：自动记录已登录账号，一键切换会话，登录页自动弹出账号选择",
   "type": "module",
   "private": true,

@@ -80,8 +80,11 @@ export const zh = {
     },
     actions: {
       add: '＋ 添加账号',
+      addTitle: '先保存当前会话，再去登录页添加新账号',
       saveSession: '保存当前会话',
+      saveSessionTitle: '把当前会话存进对应账号',
       logout: '退出当前账号',
+      logoutTitle: '只清掉本地 cookie，快照保留，随时能切回来',
     },
     transfer: {
       section: '导入导出',

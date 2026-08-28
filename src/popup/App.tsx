@@ -545,13 +545,26 @@ export function App() {
       </header>
 
       <div className="actions">
-        <button className="primary" disabled={busy !== null} onClick={addAccount}>
+        <button
+          className="primary"
+          title={s.popup.actions.addTitle}
+          disabled={busy !== null}
+          onClick={addAccount}
+        >
           {s.popup.actions.add}
         </button>
-        <button disabled={busy !== null || !state?.loggedIn} onClick={() => void capture()}>
+        <button
+          title={s.popup.actions.saveSessionTitle}
+          disabled={busy !== null || !state?.loggedIn}
+          onClick={() => void capture()}
+        >
           {s.popup.actions.saveSession}
         </button>
-        <button disabled={busy !== null || !state?.loggedIn} onClick={() => void logout()}>
+        <button
+          title={s.popup.actions.logoutTitle}
+          disabled={busy !== null || !state?.loggedIn}
+          onClick={() => void logout()}
+        >
           {s.popup.actions.logout}
         </button>
       </div>
