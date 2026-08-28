@@ -10,9 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -31,7 +31,7 @@ jobs:
               if (!f || !require('fs').existsSync('dist/'+f)) throw new Error('缺少产物: '+f)
             console.log('manifest v'+m.version+' 产物齐全')"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: dist-${{ github.sha }}
           path: dist
