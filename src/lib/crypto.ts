@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 import { EXPORT_FORMAT, EXPORT_VERSION, EncryptedBundle, ExportBundle } from '@/types'
 
 /**
@@ -67,7 +68,7 @@ export async function encryptBundle(
     encrypted: true,
     exportedAt: bundle.exportedAt,
     accountCount: bundle.accounts.length,
-    warning: '本文件已用密码加密（PBKDF2-SHA256 + AES-GCM-256）。丢失密码无法恢复。',
+    warning: t().crypto.warning,
     kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: PBKDF2_ITERATIONS, salt: toBase64(salt) },
     cipher: { name: 'AES-GCM', iv: toBase64(iv) },
     payload: toBase64(ciphertext),
@@ -89,7 +90,7 @@ export async function decryptBundle(
   password: string,
 ): Promise<unknown> {
   if (bundle.cipher?.name !== 'AES-GCM' || bundle.kdf?.name !== 'PBKDF2') {
-    throw new Error('不支持的加密算法，可能来自更新版本的扩展')
+    throw new Error(t().crypto.unsupported)
   }
   const salt = fromBase64(bundle.kdf.salt)
   const iv = fromBase64(bundle.cipher.iv)
@@ -105,12 +106,12 @@ export async function decryptBundle(
     )
   } catch {
     // AES-GCM 认证失败：密码错，或文件被改过
-    throw new Error('密码错误，或文件已损坏')
+    throw new Error(t().crypto.wrongPassword)
   }
 
   try {
     return JSON.parse(new TextDecoder().decode(plaintext))
   } catch {
-    throw new Error('解密成功但内容不是合法 JSON')
+    throw new Error(t().crypto.notJson)
   }
 }

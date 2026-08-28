@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { Strings } from '@/i18n'
+import { useStrings } from '@/i18n/react'
 import { send } from '@/lib/messaging'
 import { Account } from '@/types'
 
@@ -31,8 +33,8 @@ function initials(account: Account): string {
   return (source.trim()[0] ?? '?').toUpperCase()
 }
 
-function label(account: Account): string {
-  return account.note || account.email || account.displayName || '未命名账号'
+function label(account: Account, s: Strings): string {
+  return account.note || account.email || account.displayName || s.common.unnamed
 }
 
 /** 跟随输入框位置。页面滚动、布局变化、SPA 重排都要跟上 */
@@ -60,6 +62,7 @@ function useAnchorRect(input: HTMLInputElement): Rect | null {
 }
 
 export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUseSso }: Props) {
+  const s = useStrings()
   const rect = useAnchorRect(input)
   const [query, setQuery] = useState(input.value)
   const [active, setActive] = useState(0)
@@ -86,22 +89,22 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
     const sso = account.loginMethod?.toLowerCase()
     if (sso && SSO_LABEL[sso]) {
       if (onUseSso(sso)) {
-        onToast(`${prefix}这个账号用 ${SSO_LABEL[sso]} 登录，已为你点击对应按钮`)
+        onToast(s.autofill.ssoClicked(prefix, SSO_LABEL[sso]))
         onClose()
         return
       }
-      onToast(`${prefix}这个账号用 ${SSO_LABEL[sso]} 登录，请点页面上的 ${SSO_LABEL[sso]} 登录按钮`)
+      onToast(s.autofill.ssoManual(prefix, SSO_LABEL[sso]))
       return
     }
     if (!account.email) {
-      onToast(`${prefix}这个账号没有记录邮箱，请手动登录一次`)
+      onToast(s.autofill.noEmailRecorded(prefix))
       return
     }
     if (!onFillEmail(account.email)) {
-      onToast(`${prefix}页面上找不到邮箱输入框`)
+      onToast(s.autofill.noEmailField(prefix))
       return
     }
-    onToast(`${prefix}已填入 ${account.email}`)
+    onToast(s.autofill.filled(prefix, account.email))
     onClose()
   }
 
@@ -111,7 +114,7 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
       await send({ type: 'ADD_ACCOUNT' })
       onClose()
     } catch (error) {
-      onToast(error instanceof Error ? error.message : '添加账号失败')
+      onToast(error instanceof Error ? error.message : s.autofill.addFailed)
     } finally {
       setBusy(null)
     }
@@ -120,14 +123,14 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
   /** 只把邮箱填进输入框，不动当前会话 */
   const fillOnly = (account: Account): void => {
     if (!account.email) {
-      onToast('这个账号没有记录邮箱')
+      onToast(s.autofill.noEmail)
       return
     }
     if (!onFillEmail(account.email)) {
-      onToast('页面上找不到邮箱输入框')
+      onToast(s.autofill.noField)
       return
     }
-    onToast(`已填入 ${account.email}`)
+    onToast(s.autofill.filledPlain(account.email))
     onClose()
   }
 
@@ -143,13 +146,13 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
     try {
       const res = await send({ type: 'SWITCH_ACCOUNT', id: account.id })
       if (res.ok) {
-        onToast(res.warning ?? `已切换到 ${label(account)}`)
+        onToast(res.warning ?? s.popup.msg.switched(label(account, s)))
         onClose()
         return
       }
-      reason = res.reason ?? '切换失败'
+      reason = res.reason ?? s.common.switchFailed
     } catch (error) {
-      reason = error instanceof Error ? error.message : '切换失败'
+      reason = error instanceof Error ? error.message : s.common.switchFailed
     } finally {
       setBusy(null)
     }
@@ -229,7 +232,7 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
       onMouseDown={(e) => e.preventDefault()}
     >
       <div className="autofill-head">
-        {visible.length > 0 ? '已保存的 Claude 账号' : '没有匹配的账号'}
+        {visible.length > 0 ? s.autofill.headerSaved : s.autofill.headerNone}
       </div>
       {visible.map((account, index) => {
         const usable = account.cookies.length > 0 && !account.sessionInvalid
@@ -246,20 +249,20 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
             >
               <span className="autofill-avatar">{initials(account)}</span>
               <span className="autofill-meta">
-                <span className="autofill-email">{label(account)}</span>
+                <span className="autofill-email">{label(account, s)}</span>
                 <span className="autofill-hint">
                   {account.note && account.email ? `${account.email} · ` : ''}
                   {usable
-                    ? '点击直接登录'
+                    ? s.autofill.clickToLogin
                     : account.loginMethod && SSO_LABEL[account.loginMethod.toLowerCase()]
-                      ? `用 ${SSO_LABEL[account.loginMethod.toLowerCase()]} 重新登录`
-                      : '填入邮箱'}
+                      ? s.autofill.ssoRelogin(SSO_LABEL[account.loginMethod.toLowerCase()])
+                      : s.autofill.fillEmail}
                 </span>
               </span>
               {busy === account.id ? (
                 <span className="autofill-tag">…</span>
               ) : usable ? (
-                <span className="autofill-tag">会话可用</span>
+                <span className="autofill-tag">{s.common.sessionUsable}</span>
               ) : null}
             </button>
 
@@ -269,10 +272,10 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
               <button
                 className="autofill-fill"
                 disabled={busy !== null}
-                title="只把邮箱填进输入框，不切换账号（Shift+Enter）"
+                title={s.autofill.fillOnlyTitle}
                 onClick={() => fillOnly(account)}
               >
-                仅填邮箱
+                {s.autofill.fillOnly}
               </button>
             )}
           </div>
@@ -285,8 +288,8 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
       >
         <span className="autofill-avatar autofill-plus">＋</span>
         <span className="autofill-meta">
-          <span className="autofill-email">添加其他账号</span>
-          <span className="autofill-hint">先保存当前会话，再去登录新账号</span>
+          <span className="autofill-email">{s.autofill.addOther}</span>
+          <span className="autofill-hint">{s.autofill.addOtherHint}</span>
         </span>
       </button>
     </div>

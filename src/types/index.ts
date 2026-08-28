@@ -1,4 +1,5 @@
 import type { BillingPlatform } from '@/lib/billing'
+import type { LangSetting } from '@/i18n'
 
 export type { BillingPlatform }
 
@@ -60,6 +61,8 @@ export interface Settings {
   encryptExport: boolean
   /** 拦截 claude.ai 自身的「退出登录」，先问一句是注销还是只在本地退出 */
   interceptLogout: boolean
+  /** 界面语言。'auto' = 跟浏览器的显示语言走 */
+  language: LangSetting
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -70,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   clearSiteDataOnSwitch: true,
   encryptExport: true,
   interceptLogout: true,
+  language: 'auto',
 }
 
 /** 当前浏览器里 claude.ai 的登录状态 */
@@ -156,6 +160,7 @@ export interface ImportResult {
 
 /** 一个配额窗口，比如「5 小时会话」或「7 天」 */
 export interface UsageWindow {
+  /** 词表 usage.windows 里的键（five_hour / seven_day / extra …）。旧缓存里可能是已翻译的文案 */
   label: string
   /** 0–1 */
   utilization: number

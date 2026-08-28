@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 import { StoredCookie, UsageSnapshot, UsageWindow } from '@/types'
 
 /**
@@ -67,13 +68,16 @@ interface RawUsage {
   [key: string]: unknown
 }
 
-/** limits[].kind -> 人话 */
+/**
+ * limits[].kind -> 词表里的窗口键。
+ * 存键而不是存翻译好的文案：用量结果会进缓存，存死了文案就会跟着语言过期。
+ */
 const LIMIT_LABELS: Record<string, string> = {
-  session: '5 小时会话',
-  weekly_all: '7 天',
-  weekly_opus: '7 天 Opus',
-  weekly_sonnet: '7 天 Sonnet',
-  weekly_cowork: '7 天 Cowork',
+  session: 'five_hour',
+  weekly_all: 'seven_day',
+  weekly_opus: 'seven_day_opus',
+  weekly_sonnet: 'seven_day_sonnet',
+  weekly_cowork: 'seven_day_cowork',
 }
 
 /** limits[].kind -> 顶层具名窗口的键，用来把美元额度接回去 */
@@ -87,11 +91,11 @@ const LIMIT_TO_WINDOW: Record<string, string> = {
 
 /** limits 缺失时的兜底窗口，只认这几个已知的 */
 const FALLBACK_WINDOWS: [string, string][] = [
-  ['five_hour', '5 小时会话'],
-  ['seven_day', '7 天'],
-  ['seven_day_opus', '7 天 Opus'],
-  ['seven_day_sonnet', '7 天 Sonnet'],
-  ['seven_day_cowork', '7 天 Cowork'],
+  ['five_hour', 'five_hour'],
+  ['seven_day', 'seven_day'],
+  ['seven_day_opus', 'seven_day_opus'],
+  ['seven_day_sonnet', 'seven_day_sonnet'],
+  ['seven_day_cowork', 'seven_day_cowork'],
 ]
 
 function severityOf(value: unknown): UsageWindow['severity'] {
@@ -160,7 +164,7 @@ export function parseUsage(payload: unknown): UsageWindow[] {
   if (extra?.is_enabled) {
     const utilization = ratio(extra.utilization) ?? 0
     windows.push({
-      label: '额外用量',
+      label: 'extra',
       utilization,
       usedDollars: dollars(extra.used_credits),
       limitDollars: dollars(extra.monthly_limit),
@@ -241,11 +245,11 @@ async function getJson(url: string): Promise<Fetched> {
     try {
       return { kind: 'ok', data: await res.json() }
     } catch {
-      return { kind: 'unreachable', detail: '响应不是 JSON' }
+      return { kind: 'unreachable', detail: t().net.notJson }
     }
   } catch (error) {
     const aborted = error instanceof DOMException && error.name === 'AbortError'
-    return { kind: 'unreachable', detail: aborted ? '超时' : '网络错误' }
+    return { kind: 'unreachable', detail: aborted ? t().net.timeout : t().net.networkError }
   } finally {
     clearTimeout(timer)
   }

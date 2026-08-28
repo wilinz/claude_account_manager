@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { Strings } from '@/i18n'
+import { usePageChrome, useStrings } from '@/i18n/react'
 import { describeRenewal } from '@/lib/billing'
 import { send } from '@/lib/messaging'
 import { AccountUsage, UsageWindow } from '@/types'
@@ -26,12 +28,12 @@ const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
 /** 「多久之前」。缓存刚写下时说「刚刚」，别显示成 0 分钟前 */
-function ago(at: number): string {
+function ago(at: number, s: Strings): string {
   const diff = Date.now() - at
-  if (diff < MINUTE) return '刚刚'
-  if (diff < HOUR) return `${Math.floor(diff / MINUTE)} 分钟前`
-  if (diff < DAY) return `${Math.floor(diff / HOUR)} 小时前`
-  return `${Math.floor(diff / DAY)} 天前`
+  if (diff < MINUTE) return s.common.justNow
+  if (diff < HOUR) return s.common.minutesAgo(Math.floor(diff / MINUTE))
+  if (diff < DAY) return s.common.hoursAgo(Math.floor(diff / HOUR))
+  return s.common.daysAgo(Math.floor(diff / DAY))
 }
 
 function pad(n: number): string {
@@ -39,7 +41,7 @@ function pad(n: number): string {
 }
 
 /** 绝对时刻。今明两天用「今天 / 明天」，更远的带上日期 */
-function clock(at: number): string {
+function clock(at: number, s: Strings): string {
   const date = new Date(at)
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`
 
@@ -47,8 +49,8 @@ function clock(at: number): string {
   startOfToday.setHours(0, 0, 0, 0)
   const days = Math.floor((at - startOfToday.getTime()) / DAY)
 
-  if (days === 0) return `今天 ${time}`
-  if (days === 1) return `明天 ${time}`
+  if (days === 0) return s.usage.today(time)
+  if (days === 1) return s.usage.tomorrow(time)
   return `${date.getMonth() + 1}/${date.getDate()} ${time}`
 }
 
@@ -57,25 +59,21 @@ function clock(at: number): string {
  * 取两级单位（3 小时 12 分钟），只给一级的话「3 小时后」可能实际是 3 小时 59 分，
  * 差出来的将近一小时正是你要不要现在开一轮的依据。
  */
-function countdown(diff: number): string {
-  if (diff < MINUTE) return '不到 1 分钟'
-  if (diff < HOUR) return `${Math.floor(diff / MINUTE)} 分钟`
+function countdown(diff: number, s: Strings): string {
+  if (diff < MINUTE) return s.usage.lessThanMinute
+  if (diff < HOUR) return s.usage.minutes(Math.floor(diff / MINUTE))
   if (diff < DAY) {
-    const hours = Math.floor(diff / HOUR)
-    const minutes = Math.floor((diff % HOUR) / MINUTE)
-    return minutes ? `${hours} 小时 ${minutes} 分钟` : `${hours} 小时`
+    return s.usage.hours(Math.floor(diff / HOUR), Math.floor((diff % HOUR) / MINUTE))
   }
-  const days = Math.floor(diff / DAY)
-  const hours = Math.floor((diff % DAY) / HOUR)
-  return hours ? `${days} 天 ${hours} 小时` : `${days} 天`
+  return s.usage.days(Math.floor(diff / DAY), Math.floor((diff % DAY) / HOUR))
 }
 
 /** 已经过了就说「即将重置」，避免显示负数 */
-function untilReset(resetsAt: number | undefined): string | null {
+function untilReset(resetsAt: number | undefined, s: Strings): string | null {
   if (!resetsAt) return null
   const diff = resetsAt - Date.now()
-  if (diff <= 0) return '即将重置'
-  return `${countdown(diff)}后重置 · ${clock(resetsAt)}`
+  if (diff <= 0) return s.usage.resettingSoon
+  return s.usage.resetIn(countdown(diff, s), clock(resetsAt, s))
 }
 
 /** 颜色优先听服务端的 severity，它比拍脑袋的阈值准；没给才退回阈值 */
@@ -88,11 +86,14 @@ function tone(usageWindow: UsageWindow): string {
   return ''
 }
 
-function Bar({ window: usageWindow }: { window: UsageWindow }) {
+function Bar({ window: usageWindow, s }: { window: UsageWindow; s: Strings }) {
+  // label 存的是词表键；旧缓存里可能还是当时那份已翻译的文案，认不出就原样显示
+  const name = s.usage.windows[usageWindow.label] ?? usageWindow.label
+  const reset = untilReset(usageWindow.resetsAt, s)
   return (
     <div className="window">
       <div className="window-head">
-        <span className="window-label">{usageWindow.label}</span>
+        <span className="window-label">{name}</span>
         <span className="window-amount">{amount(usageWindow)}</span>
       </div>
       <div className="bar">
@@ -101,12 +102,12 @@ function Bar({ window: usageWindow }: { window: UsageWindow }) {
           style={{ width: `${usageWindow.utilization * 100}%` }}
         />
       </div>
-      {untilReset(usageWindow.resetsAt) && (
+      {reset && (
         <span
           className="window-reset"
           title={usageWindow.resetsAt ? new Date(usageWindow.resetsAt).toLocaleString() : undefined}
         >
-          {untilReset(usageWindow.resetsAt)}
+          {reset}
         </span>
       )}
     </div>
@@ -114,6 +115,8 @@ function Bar({ window: usageWindow }: { window: UsageWindow }) {
 }
 
 export function App() {
+  const s = useStrings()
+  usePageChrome(`${s.common.extName} — ${s.usage.title}`)
   const [rows, setRows] = useState<AccountUsage[] | null>(null)
   /** 当前显示的数据是哪一刻查的；null 表示还没有任何数据 */
   const [fetchedAt, setFetchedAt] = useState<number | null>(null)
@@ -130,11 +133,11 @@ export function App() {
       setRows(await send({ type: 'FETCH_ALL_USAGE' }))
       setFetchedAt(Date.now())
     } catch (e) {
-      setError(e instanceof Error ? e.message : '查询失败')
+      setError(e instanceof Error ? e.message : s.usage.queryFailed)
     } finally {
       setBusy(false)
     }
-  }, [])
+  }, [s])
 
   // 先把上次的结果铺上去，再在后台刷新 —— 打开页面不该先看几秒空白
   useEffect(() => {
@@ -164,24 +167,22 @@ export function App() {
     <div className="page">
       <header className="header">
         <div>
-          <h1>账号用量总览</h1>
-          <p className="sub">
-            逐个账号用它自己的会话查询，全程不改动浏览器里当前登录的账号。
-          </p>
+          <h1>{s.usage.title}</h1>
+          <p className="sub">{s.usage.sub}</p>
           <p className="status">
-            {fetchedAt && <span>数据来自 {ago(fetchedAt)}</span>}
-            {busy && rows !== null && <span className="spin">正在刷新…</span>}
+            {fetchedAt && <span>{s.usage.fetchedAt(ago(fetchedAt, s))}</span>}
+            {busy && rows !== null && <span className="spin">{s.usage.refreshing}</span>}
           </p>
         </div>
         <button className="primary" disabled={busy} onClick={() => void load()}>
-          {busy ? '查询中…' : '刷新'}
+          {busy ? s.usage.querying : s.usage.refresh}
         </button>
       </header>
 
       {error && <p className="error">{error}</p>}
 
-      {rows === null && !error && <p className="empty">正在逐个账号查询…</p>}
-      {rows !== null && rows.length === 0 && <p className="empty">还没有保存任何账号。</p>}
+      {rows === null && !error && <p className="empty">{s.usage.loadingAll}</p>}
+      {rows !== null && rows.length === 0 && <p className="empty">{s.usage.empty}</p>}
 
       <div className="grid">
         {rows?.map((row) => (
@@ -203,14 +204,14 @@ export function App() {
               <>
                 <div className="windows">
                   {row.usage.windows.map((w, i) => (
-                    <Bar key={`${w.label}-${i}`} window={w} />
+                    <Bar key={`${w.label}-${i}`} window={w} s={s} />
                   ))}
                 </div>
                 <button
                   className="link"
                   onClick={() => setExpanded(expanded === row.accountId ? null : row.accountId)}
                 >
-                  {expanded === row.accountId ? '收起原始数据' : '原始数据'}
+                  {expanded === row.accountId ? s.usage.rawCollapse : s.usage.raw}
                 </button>
                 {expanded === row.accountId && (
                   <pre className="raw">
@@ -229,8 +230,9 @@ export function App() {
 
       {rows !== null && rows.length > 0 && withUsage.length === 0 && (
         <p className="empty">
-          一个账号的用量都没取到。逐个卡片上的原因通常就是答案；如果全是网络问题，
-          看一眼 <code>chrome://extensions</code> 里后台的报错。
+          {s.usage.allFailed}
+          <code>chrome://extensions</code>
+          {s.usage.allFailedTail}
         </p>
       )}
     </div>

@@ -26,6 +26,7 @@ MV3 + TypeScript + React + Vite + CRXJS. Everything stays on your machine; nothi
 - **Usage overview** — see each account's 5-hour / 7-day quota without switching sessions
 - **Renewal dates** — record each account's renewal day and store, and get the next renewal computed under the right rules for Web / App Store / Google Play
 - **Import & export** — JSON backups, optionally AES-encrypted with a password; both directions let you pick which parts to include
+- **English and Chinese** — follows your browser language by default, or pin either one in settings
 
 ## Install
 
@@ -68,7 +69,7 @@ git tag v0.1.0 && git push origin v0.1.0
 | Logout prompt | `src/content/LogoutChoice.tsx` | Intercepts the site's logout and asks which kind you meant |
 | Site data | `src/lib/siteData.ts` | Clears account-scoped caches while keeping device binding |
 | Popup | `src/popup/App.tsx` | Account list, notes, billing, import/export |
-| Settings page | `src/settings/App.tsx` | All the toggles |
+| Settings page | `src/settings/App.tsx` | All the toggles, plus language |
 | Usage page | `src/usage/App.tsx` | Quota overview across accounts |
 | Cookie layer | `src/lib/cookies.ts` | Read / clear / restore cookies on the claude.ai domain |
 | Identity | `src/lib/claudeApi.ts` | Calls `/api/account` for email and uuid |
@@ -76,6 +77,7 @@ git tag v0.1.0 && git push origin v0.1.0
 | Renewals | `src/lib/billing.ts` | Per-platform short-month rules |
 | Transfer | `src/lib/transfer.ts` | Export bundling, import validation, merge strategies, part selection |
 | Crypto | `src/lib/crypto.ts` | PBKDF2-SHA256 + AES-GCM-256 |
+| Strings | `src/i18n/` | The two string tables, language resolution, and switching |
 
 ### Why site data has to be swapped too
 
@@ -195,6 +197,14 @@ ciphertext = AES-GCM(iv=12B random, JSON.stringify(bundle))
 ```
 
 Salt, iv, and ciphertext are stored base64 in the file. The only plaintext fields are `exportedAt` and `accountCount`, so you can confirm you grabbed the right file. AES-GCM is authenticated, so a wrong password or a tampered file both surface as "wrong password, or the file is corrupted". **A lost password cannot be recovered.**
+
+## Interface language
+
+The default is "follow browser": Chinese when the browser's display language is Chinese (`zh`, `zh-CN`, `zh-TW`, …), English otherwise. To pin it, the first setting on the settings page offers 中文 and English — every open page follows immediately, no reload needed.
+
+Strings live in `src/i18n/`. `zh.ts` is the source of truth and `en.ts` is typed against it as `Strings`, so **a missing key — or a parameterized string whose argument count drifts — fails to compile** rather than surfacing as an untranslated line in the UI. Parameterized strings are functions rather than `{n}` placeholders, which puts their arity and types under TypeScript's control.
+
+Usage results store the window **key** (`five_hour`, `seven_day`, …) rather than a translated label, because those results are cached: baking in the label would leave the old language showing after a switch.
 
 ## Permissions
 

@@ -36,6 +36,8 @@
  * 界面上只在 29 号及以后才提示。
  */
 
+import { t } from '@/i18n'
+
 export type BillingPlatform = 'web' | 'ios' | 'android'
 
 /** preserve = 锚点保留（Stripe）；ratchet = 锚点永久下移（Google Play） */
@@ -43,10 +45,9 @@ type ShortMonthRule = 'preserve' | 'ratchet'
 
 export const BILLING_PLATFORMS: BillingPlatform[] = ['web', 'ios', 'android']
 
-export const PLATFORM_LABELS: Record<BillingPlatform, string> = {
-  web: '官网',
-  ios: 'App Store',
-  android: 'Google Play',
+/** 平台名。写成函数而不是常量表：语言可以在运行中改，常量表会停在初始那一份 */
+export function platformLabel(platform: BillingPlatform): string {
+  return t().billing.platforms[platform]
 }
 
 const PLATFORM_RULES: Record<BillingPlatform, ShortMonthRule> = {
@@ -62,10 +63,8 @@ export const PLATFORM_RULE_DOCUMENTED: Record<BillingPlatform, boolean> = {
   android: true,
 }
 
-export const PLATFORM_RULE_NOTES: Record<BillingPlatform, string> = {
-  web: '短月落到月末，下个月回到原日号（Stripe 官方文档）',
-  ios: '短月落到月末，下个月回到原日号（App Store Connect Help）',
-  android: '短月下移后不再回弹，之后固定在新日号（Google Play 官方文档）',
+export function platformRuleNote(platform: BillingPlatform): string {
+  return t().billing.rules[platform]
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -190,7 +189,6 @@ export function describeRenewal(
 ): string {
   const next = nextRenewal(anchorMs, platform, from)
   const days = daysUntilRenewal(anchorMs, platform, from)
-  const when = days === 0 ? '今天续订' : days === 1 ? '明天续订' : `还有 ${days} 天`
-  const where = platform ? `${PLATFORM_LABELS[platform]} · ` : ''
-  return `${where}${next.getMonth() + 1} 月 ${next.getDate()} 日续订 · ${when}`
+  const where = platform ? `${platformLabel(platform)} · ` : ''
+  return t().billing.renewal(where, next.getMonth() + 1, next.getDate(), days)
 }

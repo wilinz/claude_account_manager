@@ -26,6 +26,7 @@ MV3 + TypeScript + React + Vite + CRXJS。数据只存在本地，不发往任�
 - **用量总览** —— 不切换会话就能看到每个账号的 5 小时 / 7 天配额用了多少
 - **订阅续订日** —— 记下每个账号的续订日与渠道，按官网 / App Store / Google Play 各自的规则推算下次续订
 - **导入导出** —— 导出为 JSON 备份，可用密码 AES 加密；导入导出都能按项勾选带哪些内容
+- **中英双语** —— 默认跟随浏览器语言，也能在设置里固定成中文或英文
 
 ## 安装
 
@@ -68,7 +69,7 @@ git tag v0.1.0 && git push origin v0.1.0
 | 退出询问 | `src/content/LogoutChoice.tsx` | 拦下站点的退出登录，问清是注销还是本地退出 |
 | 站点数据 | `src/lib/siteData.ts` | 清除账号相关缓存，保留设备绑定 |
 | Popup | `src/popup/App.tsx` | 账号列表、备注、订阅信息、导入导出 |
-| 设置页 | `src/settings/App.tsx` | 全部开关 |
+| 设置页 | `src/settings/App.tsx` | 全部开关与语言 |
 | 用量页 | `src/usage/App.tsx` | 各账号配额总览 |
 | Cookie 层 | `src/lib/cookies.ts` | claude.ai 域 cookie 的读取 / 清空 / 写回 |
 | 身份识别 | `src/lib/claudeApi.ts` | 调 `/api/account` 拿邮箱与 uuid |
@@ -76,6 +77,7 @@ git tag v0.1.0 && git push origin v0.1.0
 | 续订推算 | `src/lib/billing.ts` | 三个平台各自的短月规则 |
 | 导入导出 | `src/lib/transfer.ts` | 导出打包、导入校验、合并策略与内容项裁剪 |
 | 加密 | `src/lib/crypto.ts` | PBKDF2-SHA256 + AES-GCM-256 |
+| 文案 | `src/i18n/` | 中英两份词表、语言解析与切换 |
 
 ### 为什么必须连站点数据一起换
 
@@ -195,6 +197,14 @@ PBKDF2-SHA256(password, salt=16B random, iterations=250000) -> AES-GCM-256 key
 ```
 
 salt / iv / 密文以 base64 存在文件里，明文可见的只有 `exportedAt` 和 `accountCount`（方便确认拿对了文件）。AES-GCM 自带认证，密码错或文件被篡改都会在解密时报「密码错误，或文件已损坏」。**密码丢失无法恢复。**
+
+## 界面语言
+
+默认「跟随浏览器」：浏览器显示语言是中文（`zh`、`zh-CN`、`zh-TW`…）就用中文，其余一律英文。想固定住的话，设置页第一项可以直接选中文或 English，改完所有已打开的页面立即跟着变，不用刷新。
+
+文案放在 `src/i18n/`：`zh.ts` 是原本，`en.ts` 用 `Strings` 类型约束——**少一个键、或者带参数的文案参数个数对不上，都在编译期就挡下来**，不会等到界面上冒出一句原文才发现。带参数的文案写成函数而不是 `{n}` 这种占位符，参数的个数和类型跟着 TypeScript 走。
+
+用量结果里存的是窗口的**键**（`five_hour`、`seven_day`…）而不是翻译好的文案，因为这份结果会进缓存——存死了文案，换语言之后缓存里的旧文案就跟着一起显示出来了。
 
 ## 权限说明
 

@@ -1,3 +1,4 @@
+import { onLangChange, ready, t } from '@/i18n'
 import { emailFromOrgName, fetchIdentity, fetchIdentityDetailed, Identity } from '@/lib/claudeApi'
 import {
   captureCookies,
@@ -118,14 +119,14 @@ async function mergeEmailPlaceholder(realId: string, email: string): Promise<voi
 
 /** 把当前浏览器里的 claude.ai 会话存进对应账号 */
 async function captureCurrent(): Promise<MessageResultMap['CAPTURE_CURRENT']> {
-  if (await isSwitching()) return { saved: false, reason: '正在切换账号' }
-  if (!(await hasLiveSession())) return { saved: false, reason: '当前未登录 claude.ai' }
+  if (await isSwitching()) return { saved: false, reason: t().bg.switching }
+  if (!(await hasLiveSession())) return { saved: false, reason: t().bg.notLoggedIn }
 
   const identity = await fetchIdentity()
-  if (!identity) return { saved: false, reason: '会话已失效或无法读取账号信息' }
+  if (!identity) return { saved: false, reason: t().bg.identityFailed }
 
   const cookies = await captureCookies()
-  if (!hasSession(cookies)) return { saved: false, reason: `未找到 ${SESSION_COOKIE}` }
+  if (!hasSession(cookies)) return { saved: false, reason: t().bg.noSessionCookie(SESSION_COOKIE) }
 
   const id = identityId(identity)
   const now = Date.now()
@@ -147,9 +148,9 @@ async function captureCurrent(): Promise<MessageResultMap['CAPTURE_CURRENT']> {
 /** 用某个账号的 cookie 快照替换当前会话 */
 async function switchAccount(id: string): Promise<MessageResultMap['SWITCH_ACCOUNT']> {
   const target = await getAccount(id)
-  if (!target) return { ok: false, reason: '账号不存在' }
+  if (!target) return { ok: false, reason: t().bg.accountMissing }
   if (!hasSession(target.cookies)) {
-    return { ok: false, reason: '该账号没有保存会话，请用邮箱重新登录一次' }
+    return { ok: false, reason: t().bg.noSavedSession }
   }
 
   const settings = await getSettings()
@@ -171,7 +172,7 @@ async function switchAccount(id: string): Promise<MessageResultMap['SWITCH_ACCOU
     )
     if (failed.includes(SESSION_COOKIE)) {
       await rollback(previousCookies)
-      return { ok: false, reason: `会话 cookie 写入失败（${failed.join('、')}），已恢复原会话` }
+      return { ok: false, reason: t().bg.writeFailed(failed.join(', ')) }
     }
 
     // 用服务端校验这份会话是否还有效
@@ -182,14 +183,11 @@ async function switchAccount(id: string): Promise<MessageResultMap['SWITCH_ACCOU
       const restored = await rollback(previousCookies)
       return {
         ok: false,
-        reason:
-          `cookie 写回成功（${target.cookies.length} 条），但服务端判定这个会话已失效。\n` +
-          `快照时间：${new Date(target.sessionUpdatedAt).toLocaleString()}\n` +
-          `最常见的原因是在 claude.ai 上点了「退出登录」—— 那会让服务端吊销这份会话，` +
-          `保存的 cookie 就作废了。切换账号请直接用本扩展，或用弹窗里的「退出当前账号」（只清本地 cookie）。\n` +
-          (restored
-            ? `已恢复切换前的状态，这个账号需要重新登录一次。`
-            : `注意：切换前的会话也没能恢复，现在是未登录状态，需要重新登录。`),
+        reason: t().bg.invalidSession(
+          target.cookies.length,
+          new Date(target.sessionUpdatedAt).toLocaleString(),
+          restored,
+        ),
       }
     }
 
@@ -205,9 +203,7 @@ async function switchAccount(id: string): Promise<MessageResultMap['SWITCH_ACCOU
       // 问不到 ≠ 失效。此时目标 cookie 已经写进去了，切换大概率是成功的，
       // 回滚反而会把用户莫名其妙地丢回上一个账号 —— 保留现状，把不确定性如实说出来。
       await upsertAccount(id, { email: target.email, lastUsedAt: Date.now() })
-      warning =
-        `已写入 ${target.email || '该账号'} 的会话，但没能连上 claude.ai 确认（${verified.detail}）。\n` +
-        `没有回滚。刷新页面确认一下；如果还是旧账号，重试一次即可。`
+      warning = t().bg.unverified(target.email || t().common.thisAccount, verified.detail)
       console.warn('[switch] 无法校验目标会话，保留不回滚：', verified.detail)
     }
 
@@ -413,11 +409,11 @@ async function fetchAllUsage(): Promise<AccountUsage[]> {
       }
 
       if (!hasSession(account.cookies)) {
-        results.push({ ...base, error: '没有保存会话' })
+        results.push({ ...base, error: t().bg.noSession })
         continue
       }
       if (account.sessionInvalid) {
-        results.push({ ...base, error: '会话已失效，需要重新登录' })
+        results.push({ ...base, error: t().bg.sessionExpired })
         continue
       }
 
@@ -427,11 +423,11 @@ async function fetchAllUsage(): Promise<AccountUsage[]> {
       } else if (result.kind === 'unauthorized') {
         // 服务端不认这份会话，顺手标记，省得下次还拿它去切换
         await markInvalid(account.id)
-        results.push({ ...base, error: '会话已失效，需要重新登录' })
+        results.push({ ...base, error: t().bg.sessionExpired })
       } else if (result.kind === 'no-quota') {
-        results.push({ ...base, error: '没有配额数据（免费账号）' })
+        results.push({ ...base, error: t().bg.noQuota })
       } else {
-        results.push({ ...base, error: `拿不到用量（${result.detail}）` })
+        results.push({ ...base, error: t().bg.usageFailed(result.detail) })
       }
     }
   } finally {
@@ -457,7 +453,7 @@ async function exportAccounts(
 
   const all = await listAccounts()
   const selected = ids.length === 0 ? all : all.filter((a) => ids.includes(a.id))
-  if (selected.length === 0) throw new Error('没有选中任何账号')
+  if (selected.length === 0) throw new Error(t().bg.noneSelected)
   // 订阅信息挂在账号上，跟着账号走；设置是全局的，单独带一份
   return buildBundle(selected, await getSettings(), parts)
 }
@@ -499,11 +495,14 @@ async function getState(): Promise<CurrentState> {
   }
 }
 
+// service worker 活着的时候用户可能在设置页改了语言，图标标题得跟着换
+onLangChange(() => void updateBadge())
+
 async function updateBadge(): Promise<void> {
   const state = await getState().catch(() => ({ loggedIn: false }) as CurrentState)
   const label = state.email || state.displayName
   await chrome.action.setTitle({
-    title: label ? `Claude 账号切换器 — ${label}` : 'Claude 账号切换器 — 未登录',
+    title: t().bg.badgeTitle(label),
   })
   await chrome.action.setBadgeBackgroundColor({ color: '#c96442' })
   await chrome.action.setBadgeText({ text: state.loggedIn ? '' : '!' })
@@ -622,6 +621,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 /* ------------------------------------------------------------------ */
 
 async function handle(message: Message): Promise<unknown> {
+  // service worker 会被随时叫醒，语言得先就位，否则第一条消息的文案可能还是默认语言
+  await ready
   switch (message.type) {
     case 'PING':
       return { buildId: __BUILD_ID__ }
@@ -719,10 +720,7 @@ async function handle(message: Message): Promise<unknown> {
    * message 在这里被收窄成 never：漏写一个 case 会直接编译不过。
    */
   const unknown: never = message
-  throw new Error(
-    `后台不认识这个消息类型：${(unknown as Message).type}。` +
-      `多半是扩展代码更新了但没重新加载，去 chrome://extensions 点一下刷新。`,
-  )
+  throw new Error(t().bg.unknownMessage((unknown as Message).type))
 }
 
 chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {

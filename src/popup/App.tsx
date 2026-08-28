@@ -4,13 +4,15 @@ import {
   BillingPlatform,
   describeRenewal,
   formatDate,
-  PLATFORM_LABELS,
-  PLATFORM_RULE_NOTES,
+  platformLabel,
+  platformRuleNote,
   ruleMatters,
 } from '@/lib/billing'
 import { decryptBundle, encryptBundle, isEncryptedBundle } from '@/lib/crypto'
 import { send } from '@/lib/messaging'
 import { bundleFileName } from '@/lib/transfer'
+import type { Strings } from '@/i18n'
+import { usePageChrome, useStrings } from '@/i18n/react'
 import {
   Account,
   ALL_TRANSFER_PARTS,
@@ -20,25 +22,21 @@ import {
   TransferParts,
 } from '@/types'
 
-const STRATEGY_LABEL: Record<ImportStrategy, string> = {
-  merge: '合并（只用更新的会话）',
-  overwrite: '覆盖同名账号',
-  replace: '替换本地全部账号',
-}
+const STRATEGIES: ImportStrategy[] = ['merge', 'overwrite', 'replace']
 
 function initials(account: Account): string {
   const source = account.note || account.displayName || account.email
   return (source.trim()[0] ?? '?').toUpperCase()
 }
 
-function relative(ts: number): string {
-  if (!ts) return '从未使用'
+function relative(ts: number, s: Strings): string {
+  if (!ts) return s.common.never
   const diff = Date.now() - ts
   const minute = 60_000
-  if (diff < minute) return '刚刚'
-  if (diff < 60 * minute) return `${Math.floor(diff / minute)} 分钟前`
-  if (diff < 24 * 60 * minute) return `${Math.floor(diff / (60 * minute))} 小时前`
-  return `${Math.floor(diff / (24 * 60 * minute))} 天前`
+  if (diff < minute) return s.common.justNow
+  if (diff < 60 * minute) return s.common.minutesAgo(Math.floor(diff / minute))
+  if (diff < 24 * 60 * minute) return s.common.hoursAgo(Math.floor(diff / (60 * minute)))
+  return s.common.daysAgo(Math.floor(diff / (24 * 60 * minute)))
 }
 
 /** 触发浏览器下载。popup 关闭不影响已经开始的下载 */
@@ -66,11 +64,7 @@ interface PendingTransfer {
   run: (parts: TransferParts, strategy: ImportStrategy) => void | Promise<void>
 }
 
-const PART_LABELS: { key: keyof TransferParts; title: string; desc: string }[] = [
-  { key: 'cookies', title: '会话 cookie', desc: '登录凭证本身，能直接登进账号' },
-  { key: 'billing', title: '订阅信息', desc: '每月续订日与订阅渠道' },
-  { key: 'settings', title: '扩展设置', desc: '自动保存、退出拦截等开关' },
-]
+const PART_KEYS: (keyof TransferParts)[] = ['cookies', 'billing', 'settings']
 
 /**
  * 导入 / 导出前勾选带哪几类数据。
@@ -84,6 +78,7 @@ function TransferPicker({
   onCancel: () => void
 }) {
   // 默认勾上所有「可用」的项：多数时候用户就是想整份带走
+  const s = useStrings()
   const [parts, setParts] = useState<TransferParts>(pending.available)
   // 策略跟着这次导入走，关掉面板就没了 —— 不该是个记在外面的全局开关
   const [strategy, setStrategy] = useState<ImportStrategy>('merge')
@@ -91,29 +86,35 @@ function TransferPicker({
 
   return (
     <div className="sheet" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
-      <div className="sheet-card" role="dialog" aria-label="选择内容">
+      <div className="sheet-card" role="dialog" aria-label={s.popup.sheet.aria}>
         <p className="sheet-title">
-          {pending.kind === 'export' ? `导出${pending.label}` : '导入备份'}
+          {pending.kind === 'export'
+            ? s.popup.sheet.exportTitle(pending.label)
+            : s.popup.sheet.importTitle}
         </p>
         <p className="sheet-sub">
-          {pending.kind === 'export' ? '选择要写进文件的内容' : `从 ${pending.label} 恢复哪些内容`}
-          {pending.exportedAt && ` · 导出于 ${new Date(pending.exportedAt).toLocaleString()}`}
+          {pending.kind === 'export'
+            ? s.popup.sheet.exportSub
+            : s.popup.sheet.importSub(pending.label)}
+          {pending.exportedAt &&
+            s.popup.sheet.exportedAt(new Date(pending.exportedAt).toLocaleString())}
         </p>
 
-        {PART_LABELS.map((item) => {
-          const usable = pending.available[item.key]
+        {PART_KEYS.map((key) => {
+          const usable = pending.available[key]
+          const item = s.popup.parts[key]
           return (
-            <label key={item.key} className={usable ? 'sheet-item' : 'sheet-item off'}>
+            <label key={key} className={usable ? 'sheet-item' : 'sheet-item off'}>
               <input
                 type="checkbox"
-                checked={usable && parts[item.key]}
+                checked={usable && parts[key]}
                 disabled={!usable}
-                onChange={(e) => setParts((p) => ({ ...p, [item.key]: e.target.checked }))}
+                onChange={(e) => setParts((p) => ({ ...p, [key]: e.target.checked }))}
               />
               <span>
                 <span className="sheet-item-title">{item.title}</span>
                 <span className="sheet-item-desc">
-                  {usable ? item.desc : '这个文件里没有'}
+                  {usable ? item.desc : s.popup.sheet.missing}
                 </span>
               </span>
             </label>
@@ -122,11 +123,11 @@ function TransferPicker({
 
         {pending.kind === 'import' && (
           <label className="sheet-strategy">
-            <span className="sheet-item-title">同名账号怎么处理</span>
+            <span className="sheet-item-title">{s.popup.sheet.strategyLabel}</span>
             <select value={strategy} onChange={(e) => setStrategy(e.target.value as ImportStrategy)}>
-              {(Object.keys(STRATEGY_LABEL) as ImportStrategy[]).map((key) => (
+              {STRATEGIES.map((key) => (
                 <option key={key} value={key}>
-                  {STRATEGY_LABEL[key]}
+                  {s.popup.strategy[key]}
                 </option>
               ))}
             </select>
@@ -135,7 +136,7 @@ function TransferPicker({
 
         <div className="sheet-actions">
           <button className="mini ghost" onClick={onCancel}>
-            取消
+            {s.common.cancel}
           </button>
           <button
             className="mini primary"
@@ -145,7 +146,7 @@ function TransferPicker({
               if (
                 pending.kind === 'import' &&
                 strategy === 'replace' &&
-                !window.confirm('「替换本地全部账号」会清空现有记录，继续？')
+                !window.confirm(s.popup.sheet.replaceConfirm)
               ) {
                 return
               }
@@ -153,7 +154,11 @@ function TransferPicker({
               void pending.run(parts, strategy)
             }}
           >
-            {nothing ? '至少选一项' : pending.kind === 'export' ? '导出' : '导入'}
+            {nothing
+              ? s.popup.sheet.atLeastOne
+              : pending.kind === 'export'
+                ? s.popup.sheet.doExport
+                : s.popup.sheet.doImport}
           </button>
         </div>
       </div>
@@ -173,6 +178,7 @@ interface BillingEditorProps {
  * 平台按账单地址时区算，从购买时间反推会差一天。渠道决定短月怎么往后推。
  */
 function BillingEditor({ account, disabled, onSave, onCancel }: BillingEditorProps) {
+  const s = useStrings()
   const [date, setDate] = useState(
     account.billingAnchor ? formatDate(account.billingAnchor) : '',
   )
@@ -184,15 +190,15 @@ function BillingEditor({ account, disabled, onSave, onCancel }: BillingEditorPro
   return (
     <div className="billing-edit">
       <label className="billing-field">
-        <span>续订日</span>
+        <span>{s.popup.billing.anchor}</span>
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </label>
       <label className="billing-field">
-        <span>订阅渠道</span>
+        <span>{s.popup.billing.platform}</span>
         <select value={platform} onChange={(e) => setPlatform(e.target.value as BillingPlatform)}>
           {BILLING_PLATFORMS.map((p) => (
             <option key={p} value={p}>
-              {PLATFORM_LABELS[p]}
+              {platformLabel(p)}
             </option>
           ))}
         </select>
@@ -200,25 +206,28 @@ function BillingEditor({ account, disabled, onSave, onCancel }: BillingEditorPro
 
       {/* 续订日 28 号及以前三家规则完全一致，没必要拿规则差异打扰用户 */}
       {anchor !== null && ruleMatters(anchor) && (
-        <p className="billing-note">{PLATFORM_RULE_NOTES[platform]}</p>
+        <p className="billing-note">{platformRuleNote(platform)}</p>
       )}
 
-      <p className="billing-note">照抄平台里显示的下次续订日期。各家按自己的时区算，
-        从购买时间反推会差一天。</p>
+      <p className="billing-note">{s.popup.billing.note}</p>
 
       <div className="billing-actions">
-        <button className="mini" disabled={disabled || anchor === null} onClick={() => onSave(anchor, platform)}>
-          保存
+        <button
+          className="mini"
+          disabled={disabled || anchor === null}
+          onClick={() => onSave(anchor, platform)}
+        >
+          {s.common.save}
         </button>
         <button
           className="mini ghost danger"
           disabled={disabled || !account.billingAnchor}
           onClick={() => onSave(null, null)}
         >
-          清除
+          {s.common.clear}
         </button>
         <button className="mini ghost" disabled={disabled} onClick={onCancel}>
-          取消
+          {s.common.cancel}
         </button>
       </div>
     </div>
@@ -226,6 +235,8 @@ function BillingEditor({ account, disabled, onSave, onCancel }: BillingEditorPro
 }
 
 export function App() {
+  const s = useStrings()
+  usePageChrome(s.common.extName)
   const [state, setState] = useState<CurrentState | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [settings, setSettingsState] = useState<Settings | null>(null)
@@ -267,7 +278,7 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    void refresh().catch((e: unknown) => setMessage(e instanceof Error ? e.message : '加载失败'))
+    void refresh().catch((e: unknown) => setMessage(e instanceof Error ? e.message : s.common.loadFailed))
   }, [refresh])
 
   const allSelected = accounts.length > 0 && selected.size === accounts.length
@@ -290,7 +301,7 @@ export function App() {
       if (result) setMessage(result)
       await refresh()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '操作失败')
+      setMessage(error instanceof Error ? error.message : s.common.actionFailed)
     } finally {
       setBusy(null)
     }
@@ -314,31 +325,33 @@ export function App() {
   const capture = () =>
     run('capture', async () => {
       const res = await send({ type: 'CAPTURE_CURRENT' })
-      return res.saved ? `已保存 ${res.account?.email || '当前账号'}` : (res.reason ?? '保存失败')
+      return res.saved
+        ? s.popup.msg.saved(res.account?.email || s.common.currentAccount)
+        : (res.reason ?? s.popup.msg.saveFailed)
     })
 
   const switchTo = (account: Account) =>
     run(account.id, async () => {
       const res = await send({ type: 'SWITCH_ACCOUNT', id: account.id })
-      if (!res.ok) return res.reason ?? '切换失败'
+      if (!res.ok) return res.reason ?? s.common.switchFailed
       // 没能向服务端确认时，含糊地说一句「已切换」会误导人
-      return res.warning ?? `已切换到 ${account.email || '该账号'}`
+      return res.warning ?? s.popup.msg.switched(account.email || s.common.thisAccount)
     })
 
   const forget = (account: Account) =>
     run(account.id, async () => {
       await send({ type: 'FORGET_ACCOUNT', id: account.id })
-      return '已删除'
+      return s.popup.msg.deleted
     })
 
   const forgetSelected = () => {
     if (selectedAccounts.length === 0) return
     const names = selectedAccounts.map((a) => a.note || a.email || a.id).join('、')
-    if (!window.confirm(`删除这 ${selectedAccounts.length} 个账号的记录？\n${names}`)) return
+    if (!window.confirm(s.popup.msg.deleteConfirm(selectedAccounts.length, names))) return
     void run('bulk', async () => {
       const res = await send({ type: 'FORGET_ACCOUNTS', ids: [...selected] })
       setSelected(new Set())
-      return `已删除 ${res.removed} 个账号`
+      return s.popup.msg.deletedN(res.removed)
     })
   }
 
@@ -346,11 +359,11 @@ export function App() {
     run(account.id, async () => {
       await send({ type: 'SET_BILLING', id: account.id, anchor, platform })
       setBillingFor(null)
-      return anchor === null ? '已清除订阅信息' : '订阅信息已保存'
+      return anchor === null ? s.popup.billing.cleared : s.popup.billing.saved
     })
 
   const rename = (account: Account) => {
-    const note = window.prompt('给这个账号起个备注', account.note ?? '')
+    const note = window.prompt(s.popup.msg.notePrompt, account.note ?? '')
     if (note === null) return
     void run(account.id, async () => {
       await send({ type: 'RENAME_ACCOUNT', id: account.id, note: note.trim() })
@@ -361,17 +374,14 @@ export function App() {
   const logout = () =>
     run('logout', async () => {
       await send({ type: 'LOGOUT_CURRENT' })
-      return '已退出当前会话（快照已保留）'
+      return s.popup.msg.loggedOut
     })
 
   const addAccount = () => {
     // 会把浏览器变回未登录状态，说清楚这件事再动手
     if (
       state?.loggedIn &&
-      !window.confirm(
-        '将先保存当前会话，然后退出并打开登录页去添加新账号。\n' +
-          '当前账号的会话会留在列表里，随时可以切回来。继续？',
-      )
+      !window.confirm(s.popup.msg.addConfirm)
     ) {
       return
     }
@@ -379,7 +389,7 @@ export function App() {
       const res = await send({ type: 'ADD_ACCOUNT' })
       // 登录页已经打开了，弹窗留着也看不到
       window.close()
-      return res.savedCurrent ? '已保存当前会话，去登录新账号吧' : '已打开登录页'
+      return res.savedCurrent ? s.popup.msg.addSaved : s.popup.msg.addOpened
     })
   }
 
@@ -391,11 +401,11 @@ export function App() {
     const secret = password.trim()
 
     if (encrypt && !secret) {
-      setMessage('请先填写加密密码，或取消勾选「加密导出」')
+      setMessage(s.popup.msg.needPassword)
       passwordRef.current?.focus()
       return
     }
-    if (!encrypt && !window.confirm('明文导出的备份包含可直接登录的会话凭证，确定不加密？')) {
+    if (!encrypt && !window.confirm(s.popup.msg.plainConfirm)) {
       return
     }
 
@@ -421,8 +431,7 @@ export function App() {
       downloadJson(bundleFileName(bundle.accounts.length, encrypt), file)
 
       const withSession = bundle.accounts.filter((a) => a.cookies.length > 0).length
-      const suffix = encrypt ? '，已用密码加密' : '，未加密'
-      return `已导出${label} ${bundle.accounts.length} 个账号（${withSession} 个含会话）${suffix}`
+      return s.popup.msg.exported(label, bundle.accounts.length, withSession, encrypt)
     })
 
   const onPickFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -437,16 +446,16 @@ export function App() {
       try {
         parsed = JSON.parse(text)
       } catch {
-        throw new Error('文件不是合法的 JSON')
+        throw new Error(s.popup.msg.badJson)
       }
       if (isEncryptedBundle(parsed)) {
         const secret =
-          password.trim() || window.prompt('这是加密备份，请输入导出时设置的密码')?.trim()
-        if (!secret) throw new Error('这是加密备份，需要密码才能导入')
+          password.trim() || window.prompt(s.popup.msg.passwordPrompt)?.trim()
+        if (!secret) throw new Error(s.popup.msg.needSecret)
         parsed = await decryptBundle(parsed, secret)
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '读取文件失败')
+      setMessage(error instanceof Error ? error.message : s.popup.msg.readFailed)
       return
     }
 
@@ -469,11 +478,13 @@ export function App() {
   const doImport = (bundle: unknown, parts: TransferParts, strategy: ImportStrategy) =>
     run('import', async () => {
       const res = await send({ type: 'IMPORT_ACCOUNTS', bundle, strategy, parts })
-      const done = [`新增 ${res.added}`, `更新 ${res.updated}`]
-      if (res.skipped) done.push(`跳过 ${res.skipped}`)
-      if (res.invalid) done.push(`忽略无效 ${res.invalid}`)
-      if (res.settingsApplied) done.push('已恢复设置')
-      return `导入完成：${done.join(' · ')}`
+      return s.popup.msg.imported(
+        res.added,
+        res.updated,
+        res.skipped,
+        res.invalid,
+        res.settingsApplied,
+      )
     })
 
   const toggle = (patch: Partial<Settings>) =>
@@ -496,11 +507,9 @@ export function App() {
 
       {stale && (
         <div className="stale">
-          <span>
-            后台还在跑旧代码，保存和导出可能静默失效。
-          </span>
+          <span>{s.popup.stale.text}</span>
           <button className="mini" onClick={() => chrome.runtime.reload()}>
-            重新加载扩展
+            {s.popup.stale.reload}
           </button>
         </div>
       )}
@@ -509,41 +518,41 @@ export function App() {
         <div className="brand-row">
           <div className="brand">
             <span className="dot" />
-            <span>Claude 账号切换器</span>
+            <span>{s.common.extName}</span>
           </div>
-          <button className="open-site" title="在新标签页打开 claude.ai" onClick={openClaude}>
+          <button className="open-site" title={s.popup.header.openSite} onClick={openClaude}>
             claude.ai <span className="arrow">↗</span>
           </button>
         </div>
         <p className="current">
           {state === null
-            ? '读取中…'
+            ? s.popup.header.loading
             : state.loggedIn
-              ? `当前：${state.email || state.displayName || '已登录'}`
-              : '当前未登录 claude.ai'}
+              ? s.popup.header.current(state.email || state.displayName || s.common.loggedIn)
+              : s.popup.header.notLoggedIn}
         </p>
         {state?.loggedIn && settings && (
           <p className="current">
             {settings.autoCapture
               ? state.sessionUpdatedAt
-                ? `会话已自动保存 · ${relative(state.sessionUpdatedAt)}`
-                : '尚未保存这个会话，稍后会自动保存'
+                ? s.popup.header.autoSaved(relative(state.sessionUpdatedAt, s))
+                : s.popup.header.notSavedYet
               : state.sessionUpdatedAt
-                ? `自动保存已关闭 · 快照停留在 ${relative(state.sessionUpdatedAt)}`
-                : '自动保存已关闭 · 这个会话还没有快照'}
+                ? s.popup.header.autoOffWithSnapshot(relative(state.sessionUpdatedAt, s))
+                : s.popup.header.autoOffNoSnapshot}
           </p>
         )}
       </header>
 
       <div className="actions">
         <button className="primary" disabled={busy !== null} onClick={addAccount}>
-          ＋ 添加账号
+          {s.popup.actions.add}
         </button>
         <button disabled={busy !== null || !state?.loggedIn} onClick={() => void capture()}>
-          保存当前会话
+          {s.popup.actions.saveSession}
         </button>
         <button disabled={busy !== null || !state?.loggedIn} onClick={() => void logout()}>
-          退出当前账号
+          {s.popup.actions.logout}
         </button>
       </div>
 
@@ -557,7 +566,7 @@ export function App() {
           aria-expanded={transferOpen}
           onClick={() => setTransferOpen((open) => !open)}
         >
-          导入导出
+          {s.popup.transfer.section}
           <span className={transferOpen ? 'chevron open' : 'chevron'}>▾</span>
         </button>
         {transferOpen && (
@@ -566,16 +575,16 @@ export function App() {
             <button
               className="mini"
               disabled={busy !== null || accounts.length === 0}
-              onClick={() => exportAccounts([], '全部')}
+              onClick={() => exportAccounts([], s.popup.transfer.all)}
             >
-              导出全部
+              {s.popup.transfer.exportAll}
             </button>
             <button
               className="mini"
               disabled={busy !== null}
               onClick={() => fileRef.current?.click()}
             >
-              导入备份
+              {s.popup.transfer.importBackup}
             </button>
             <input
               ref={fileRef}
@@ -593,14 +602,18 @@ export function App() {
                 disabled={busy !== null || settings === null}
                 onChange={(e) => void toggle({ encryptExport: e.target.checked })}
               />
-              加密导出
+              {s.popup.transfer.encrypt}
             </label>
             <input
               ref={passwordRef}
               className="password"
               type="password"
               autoComplete="new-password"
-              placeholder={settings?.encryptExport === false ? '已关闭加密' : '设置加密密码'}
+              placeholder={
+                settings?.encryptExport === false
+                  ? s.popup.transfer.encryptOff
+                  : s.popup.transfer.passwordPlaceholder
+              }
               value={password}
               disabled={busy !== null || settings?.encryptExport === false}
               onChange={(e) => setPassword(e.target.value)}
@@ -608,18 +621,18 @@ export function App() {
           </div>
           <p className={settings?.encryptExport === false ? 'warn danger-text' : 'warn'}>
             {settings?.encryptExport === false
-              ? '未加密导出的是明文会话 cookie，等同于登录凭证，请勿分享或上传。'
-              : '导出用 AES-GCM-256 加密（PBKDF2-SHA256 派生密钥）。密码丢失无法恢复。'}
+              ? s.popup.transfer.warnPlain
+              : s.popup.transfer.warnEncrypted}
           </p>
           </section>
         )}
         <div className="entry-pair">
           <button className="entry" onClick={() => void chrome.runtime.openOptionsPage()}>
-            设置
+            {s.popup.transfer.settings}
             <span className="arrow">→</span>
           </button>
           <button className="entry" onClick={openUsage}>
-            用量总览
+            {s.popup.transfer.usage}
             <span className="arrow">→</span>
           </button>
         </div>
@@ -636,23 +649,23 @@ export function App() {
               disabled={busy !== null}
             />
             {selected.size > 0
-              ? `已选 ${selected.size} / ${accounts.length}`
-              : `${accounts.length} 个账号`}
+              ? s.popup.list.selectedOf(selected.size, accounts.length)
+              : s.popup.list.count(accounts.length)}
           </label>
           <div className="selectbar-actions">
             <button
               className="mini"
               disabled={busy !== null || selected.size === 0}
-              onClick={() => exportAccounts([...selected], '所选')}
+              onClick={() => exportAccounts([...selected], s.popup.transfer.selected)}
             >
-              导出所选
+              {s.popup.list.exportSelected}
             </button>
             <button
               className="mini ghost danger"
               disabled={busy !== null || selected.size === 0}
               onClick={forgetSelected}
             >
-              删除所选
+              {s.popup.list.deleteSelected}
             </button>
           </div>
         </div>
@@ -660,10 +673,7 @@ export function App() {
 
       <section className="list">
         {accounts.length === 0 && (
-          <p className="empty">
-            还没有记录任何账号。登录一次 claude.ai 后点上面的「保存当前会话」，
-            或展开「导入导出」恢复备份。
-          </p>
+          <p className="empty">{s.popup.list.empty}</p>
         )}
         {accounts.map((account) => {
           const usable = account.cookies.length > 0 && !account.sessionInvalid
@@ -676,20 +686,20 @@ export function App() {
                 checked={selected.has(account.id)}
                 onChange={() => toggleOne(account.id)}
                 disabled={busy !== null}
-                aria-label={`选择 ${account.email || account.id}`}
+                aria-label={s.popup.list.selectAria(account.email || account.id)}
               />
               <span className="avatar">{initials(account)}</span>
               <div className="meta">
                 <span className="email">
-                  {account.note || account.email || account.displayName || '未命名账号'}
+                  {account.note || account.email || account.displayName || s.common.unnamed}
                 </span>
                 <span className="hint">
                   {account.note && account.email ? `${account.email} · ` : ''}
                   {isCurrent
-                    ? '正在使用'
+                    ? s.popup.list.inUse
                     : usable
-                      ? `会话可用 · ${relative(account.lastUsedAt)}`
-                      : '仅记录邮箱'}
+                      ? s.popup.list.usable(relative(account.lastUsedAt, s))
+                      : s.popup.list.emailOnly}
                 </span>
                 {account.billingAnchor && (
                   <span className="hint billing">
@@ -702,10 +712,12 @@ export function App() {
                   <button
                     className="mini"
                     disabled={busy !== null || !usable}
-                    title={usable ? '用保存的会话切换' : '没有可用会话，去登录页会自动填邮箱'}
+                    title={
+                      usable ? s.popup.list.switchTitle : s.popup.list.switchTitleEmail
+                    }
                     onClick={() => void switchTo(account)}
                   >
-                    {busy === account.id ? '…' : '切换'}
+                    {busy === account.id ? '…' : s.common.switch}
                   </button>
                 )}
                 <button
@@ -713,22 +725,22 @@ export function App() {
                   disabled={busy !== null}
                   onClick={() => rename(account)}
                 >
-                  备注
+                  {s.common.note}
                 </button>
                 <button
                   className="mini ghost"
                   disabled={busy !== null}
-                  title="下次续订日与渠道"
+                  title={s.popup.list.billingTitle}
                   onClick={() => setBillingFor(billingFor === account.id ? null : account.id)}
                 >
-                  订阅
+                  {s.common.subscription}
                 </button>
                 <button
                   className="mini ghost danger"
                   disabled={busy !== null}
                   onClick={() => void forget(account)}
                 >
-                  删除
+                  {s.common.delete}
                 </button>
               </div>
 

@@ -93,3 +93,12 @@ button:hover { border-color: var(--accent); color: var(--accent); }
 .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .empty { margin: 24px 0 0; font-size: 12.5px; color: var(--muted); }
+
+/* 语言下拉。和开关一样右对齐，占的宽度按最长的选项走 */
+.picker {
+  flex: 0 0 auto; align-self: center;
+  font: inherit; font-size: 13px;
+  padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: transparent; color: inherit;
+}
+.picker:focus { outline: 2px solid rgba(201, 100, 66, 0.4); outline-offset: -1px; }

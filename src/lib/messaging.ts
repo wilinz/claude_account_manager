@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 import { Message, MessageResultMap, Response } from '@/types'
 
 /** 发消息给 background，失败时抛出可读错误 */
@@ -7,7 +8,7 @@ export async function send<T extends Message['type']>(
   const res = (await chrome.runtime.sendMessage(message)) as
     | Response<MessageResultMap[T]>
     | undefined
-  if (!res) throw new Error('后台无响应，请重新加载扩展')
+  if (!res) throw new Error(t().messaging.noResponse)
   if (!res.ok) throw new Error(res.error)
   return res.data
 }

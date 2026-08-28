@@ -1,3 +1,4 @@
+import { LANG_SETTINGS, t, type LangSetting } from '@/i18n'
 import { isBillingPlatform, isValidAnchor } from '@/lib/billing'
 import {
   Account,
@@ -12,8 +13,7 @@ import {
   DEFAULT_SETTINGS,
 } from '@/types'
 
-const EXPORT_WARNING =
-  '本文件包含 claude.ai 的明文会话 cookie，等同于登录凭证。请勿分享、上传或提交到代码仓库。'
+
 
 /** 按勾选把不导出的字段摘掉。摘的是键本身，留个 undefined 的话导入端会拿它盖掉现有值 */
 export function stripAccount(account: Account, parts: TransferParts): Account {
@@ -43,7 +43,7 @@ export function buildBundle(
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: Date.now(),
-    warning: EXPORT_WARNING,
+    warning: t().transfer.fileWarning,
     accounts: accounts.map((a) => stripAccount(a, parts)),
     settings: parts.settings ? settings : undefined,
   }
@@ -58,6 +58,15 @@ function sanitizeSettings(raw: unknown): Settings | undefined {
   const next = { ...DEFAULT_SETTINGS }
   let hit = false
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]) {
+    // language 是唯一的非布尔项，单独收；其余全是开关
+    if (key === 'language') {
+      const value = raw[key]
+      if (LANG_SETTINGS.includes(value as LangSetting)) {
+        next.language = value as LangSetting
+        hit = true
+      }
+      continue
+    }
     if (typeof raw[key] === 'boolean') {
       next[key] = raw[key] as boolean
       hit = true
@@ -156,15 +165,15 @@ export function parseBundle(raw: unknown): {
   invalid: number
   settings?: Settings
 } {
-  if (!isRecord(raw)) throw new Error('文件内容不是合法的 JSON 对象')
+  if (!isRecord(raw)) throw new Error(t().transfer.notObject)
 
   // 兼容直接给一个账号数组的情况
   const list = Array.isArray(raw) ? raw : raw.accounts
   if (!Array.isArray(list)) {
-    throw new Error('文件里没有 accounts 数组，可能不是本扩展导出的文件')
+    throw new Error(t().transfer.noAccountsArray)
   }
   if (raw.format !== undefined && raw.format !== EXPORT_FORMAT) {
-    throw new Error(`不认识的文件格式：${String(raw.format)}`)
+    throw new Error(t().transfer.unknownFormat(String(raw.format)))
   }
 
   const accounts: Account[] = []
@@ -174,7 +183,7 @@ export function parseBundle(raw: unknown): {
     if (account) accounts.push(account)
     else invalid += 1
   }
-  if (accounts.length === 0) throw new Error('文件里没有可用的账号记录')
+  if (accounts.length === 0) throw new Error(t().transfer.noValidAccounts)
   return { accounts, invalid, settings: sanitizeSettings(raw.settings) }
 }
 

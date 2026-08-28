@@ -1,3 +1,4 @@
+import { ready, t } from '@/i18n'
 import { createRoot, Root } from 'react-dom/client'
 import { send } from '@/lib/messaging'
 import { cachedOwners, purgeAccountSiteData } from '@/lib/siteData'
@@ -304,7 +305,7 @@ async function handlePrompt(accounts: Account[]): Promise<void> {
   // 只有一个「仅邮箱」账号时没什么可选的，直接填掉
   if (singleEmailOnly && settings.autoFillEmail && !input.value) {
     if (fillEmailInput(accounts[0].email)) {
-      toast(`已填入 ${accounts[0].email}`)
+      toast(t().autofill.filledPlain(accounts[0].email))
       return
     }
   }
@@ -354,7 +355,7 @@ async function askLogoutChoice(): Promise<LogoutVerdict> {
         email={state?.email}
         onDecide={(verdict) => {
           closePicker()
-          if (verdict === 'local') toast('已保存会话并在本地退出，可在扩展里一键切回来')
+          if (verdict === 'local') toast(t().logout.doneLocal)
           resolve(verdict)
         }}
       />,
@@ -463,6 +464,8 @@ chrome.runtime.onMessage.addListener((message: TabMessage, _sender, sendResponse
  */
 async function initAutofill(): Promise<void> {
   try {
+    // 语言先就位，免得最早的那条提示用的还是默认语言
+    await ready
     latestAccounts = await send({ type: 'LIST_ACCOUNTS' })
   } catch {
     return

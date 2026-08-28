@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 /** 从 claude.ai 服务端读取当前 cookie 对应的账号身份 */
 
 /** fetchIdentityDetailed 的三态结果，unauthorized 才代表这份会话真的废了 */
@@ -70,11 +71,11 @@ async function getJson(url: string): Promise<Fetched> {
       return { kind: 'ok', data: await res.json() }
     } catch {
       // 200 但不是 JSON：多半是 Cloudflare 挑战页或登录页 HTML，不能当作失效
-      return { kind: 'unreachable', detail: '响应不是 JSON' }
+      return { kind: 'unreachable', detail: t().net.notJson }
     }
   } catch (error) {
     const aborted = error instanceof DOMException && error.name === 'AbortError'
-    return { kind: 'unreachable', detail: aborted ? `超时 ${REQUEST_TIMEOUT_MS}ms` : '网络错误' }
+    return { kind: 'unreachable', detail: aborted ? t().net.timeoutMs(REQUEST_TIMEOUT_MS) : t().net.networkError }
   } finally {
     clearTimeout(timer)
   }

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import type { Strings } from '@/i18n'
+import { useStrings } from '@/i18n/react'
 import { send } from '@/lib/messaging'
 import { Account } from '@/types'
 
@@ -15,17 +17,18 @@ function initials(account: Account): string {
   return (source.trim()[0] ?? '?').toUpperCase()
 }
 
-function relative(ts: number): string {
-  if (!ts) return '从未使用'
+function relative(ts: number, s: Strings): string {
+  if (!ts) return s.common.never
   const diff = Date.now() - ts
   const minute = 60_000
-  if (diff < minute) return '刚刚'
-  if (diff < 60 * minute) return `${Math.floor(diff / minute)} 分钟前`
-  if (diff < 24 * 60 * minute) return `${Math.floor(diff / (60 * minute))} 小时前`
-  return `${Math.floor(diff / (24 * 60 * minute))} 天前`
+  if (diff < minute) return s.common.justNow
+  if (diff < 60 * minute) return s.common.minutesAgo(Math.floor(diff / minute))
+  if (diff < 24 * 60 * minute) return s.common.hoursAgo(Math.floor(diff / (60 * minute)))
+  return s.common.daysAgo(Math.floor(diff / (24 * 60 * minute)))
 }
 
 export function Picker({ accounts, onClose, onToast, onFillEmail }: Props) {
+  const s = useStrings()
   const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
@@ -45,13 +48,16 @@ export function Picker({ accounts, onClose, onToast, onFillEmail }: Props) {
       try {
         const res = await send({ type: 'SWITCH_ACCOUNT', id: account.id })
         if (res.ok) {
-          onToast(res.warning ?? `已切换到 ${account.email || account.displayName || '该账号'}`)
+          onToast(
+            res.warning ??
+              s.popup.msg.switched(account.email || account.displayName || s.common.thisAccount),
+          )
           onClose()
           return
         }
-        failure = res.reason ?? '切换失败'
+        failure = res.reason ?? s.common.switchFailed
       } catch (error) {
-        failure = error instanceof Error ? error.message : '切换失败'
+        failure = error instanceof Error ? error.message : s.common.switchFailed
       } finally {
         setBusy(null)
       }
@@ -63,31 +69,29 @@ export function Picker({ accounts, onClose, onToast, onFillEmail }: Props) {
       return
     }
     if (!account.email) {
-      onToast('该账号没有记录邮箱，请手动登录')
+      onToast(s.picker.noEmail)
       return
     }
     if (!onFillEmail(account.email)) {
-      onToast('当前页面没有邮箱输入框')
+      onToast(s.picker.noEmailField)
       return
     }
-    onToast(`已填入 ${account.email}，请继续完成验证`)
+    onToast(s.picker.filled(account.email))
     onClose()
   }
 
   async function disableAutoPrompt() {
     await send({ type: 'SET_SETTINGS', patch: { autoPrompt: false } })
-    onToast('已关闭自动弹出，可在扩展弹窗里重新打开')
+    onToast(s.picker.promptDisabled)
     onClose()
   }
 
   return (
     <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="panel" role="dialog" aria-label="选择 Claude 账号">
+      <div className="panel" role="dialog" aria-label={s.picker.aria}>
         <div className="head">
-          <h2 className="title">选择要使用的 Claude 账号</h2>
-          <p className="sub">
-            带「会话可用」的账号点一下就能直接进去；其余的会把邮箱填进登录框，走验证码登录。
-          </p>
+          <h2 className="title">{s.picker.title}</h2>
+          <p className="sub">{s.picker.desc}</p>
         </div>
 
         <div className="list">
@@ -103,15 +107,19 @@ export function Picker({ accounts, onClose, onToast, onFillEmail }: Props) {
                 <span className="avatar">{initials(account)}</span>
                 <span className="meta">
                   <span className="email">
-                    {account.note || account.email || account.displayName || '未命名账号'}
+                    {account.note || account.email || account.displayName || s.common.unnamed}
                   </span>
                   <span className="hint">
                     {account.note && account.email ? `${account.email} · ` : ''}
-                    {usable ? `上次使用 ${relative(account.lastUsedAt)}` : '需要重新登录'}
+                    {usable ? s.picker.lastUsed(relative(account.lastUsedAt, s)) : s.picker.needLogin}
                   </span>
                 </span>
                 <span className={usable ? 'tag' : 'tag weak'}>
-                  {busy === account.id ? '切换中…' : usable ? '会话可用' : '仅邮箱'}
+                  {busy === account.id
+                    ? s.picker.switching
+                    : usable
+                      ? s.common.sessionUsable
+                      : s.picker.emailOnly}
                 </span>
               </button>
             )
@@ -120,10 +128,10 @@ export function Picker({ accounts, onClose, onToast, onFillEmail }: Props) {
 
         <div className="foot">
           <button className="ghost" onClick={() => void disableAutoPrompt()}>
-            不再自动弹出
+            {s.picker.dontPrompt}
           </button>
           <button className="ghost" onClick={onClose}>
-            关闭
+            {s.common.close}
           </button>
         </div>
       </div>

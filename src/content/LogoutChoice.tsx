@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useStrings } from '@/i18n/react'
 import { send } from '@/lib/messaging'
 import { LogoutVerdict } from '@/types'
 
@@ -16,6 +17,7 @@ interface Props {
  * 注销会让服务端吊销会话，扩展里存的快照当场作废，再也切不回来。
  */
 export function LogoutChoice({ email, onDecide }: Props) {
+  const s = useStrings()
   const [busy, setBusy] = useState<LogoutVerdict | null>(null)
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export function LogoutChoice({ email, onDecide }: Props) {
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onDecide])
 
-  const who = email || '当前账号'
+  const who = email || s.common.currentAccount
 
   async function chooseLocal() {
     setBusy('local')
@@ -44,22 +46,20 @@ export function LogoutChoice({ email, onDecide }: Props) {
 
   return (
     <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && onDecide('cancel')}>
-      <div className="panel" role="dialog" aria-label="退出登录方式">
+      <div className="panel" role="dialog" aria-label={s.logout.aria}>
         <div className="head">
-          <h2 className="title">要怎么退出 {who}？</h2>
-          <p className="sub">
-            claude.ai 的「退出登录」会让服务端吊销这份会话，扩展里保存的快照会同时作废，
-            之后没法一键切回来。
-          </p>
+          <h2 className="title">{s.logout.title(who)}</h2>
+          <p className="sub">{s.logout.desc}</p>
         </div>
 
         <div className="list">
           <button className="choice" disabled={busy !== null} onClick={() => void chooseLocal()}>
             <span className="choice-title">
-              仅本地退出<span className="tag">推荐</span>
+              {s.logout.localTitle}
+              <span className="tag">{s.logout.recommended}</span>
             </span>
             <span className="choice-sub">
-              {busy === 'local' ? '正在保存会话…' : '保存当前会话后只清掉本地 cookie，随时能一键切回来'}
+              {busy === 'local' ? s.logout.localBusy : s.logout.localDesc}
             </span>
           </button>
 
@@ -68,21 +68,19 @@ export function LogoutChoice({ email, onDecide }: Props) {
             disabled={busy !== null}
             onClick={() => void choosePass()}
           >
-            <span className="choice-title">注销并退出</span>
+            <span className="choice-title">{s.logout.revokeTitle}</span>
             <span className="choice-sub">
-              {busy === 'pass'
-                ? '正在标记账号…'
-                : '真正向 claude.ai 注销。这份会话立刻失效，下次要重新登录'}
+              {busy === 'pass' ? s.logout.revokeBusy : s.logout.revokeDesc}
             </span>
           </button>
         </div>
 
         <div className="foot">
           <button className="ghost" onClick={() => void disableIntercept(onDecide)}>
-            不再拦截退出
+            {s.logout.dontIntercept}
           </button>
           <button className="ghost" disabled={busy !== null} onClick={() => onDecide('cancel')}>
-            取消
+            {s.common.cancel}
           </button>
         </div>
       </div>
