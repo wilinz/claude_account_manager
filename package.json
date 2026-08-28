@@ -1,5 +1,5 @@
 {
-  "name": "claude-web-toolbox",
+  "name": "claude_account_manager",
   "displayName": "Claude Account Switcher",
   "version": "0.2.2",
   "description": "Manage several claude.ai accounts in one browser: sessions are captured automatically, switch with one click, and saved accounts appear on the login page.",

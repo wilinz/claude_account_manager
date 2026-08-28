@@ -1,8 +1,8 @@
 # Claude Account Switcher
 
 <p>
-  <a href="https://github.com/wilinz/claude-web-toolbox/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/wilinz/claude-web-toolbox/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/wilinz/claude-web-toolbox/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/wilinz/claude-web-toolbox?label=release"></a>
+  <a href="https://github.com/wilinz/claude_account_manager/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/wilinz/claude_account_manager/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/wilinz/claude_account_manager/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/wilinz/claude_account_manager?label=release"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
@@ -32,7 +32,7 @@ MV3 + TypeScript + React + Vite + CRXJS. Everything stays on your machine; nothi
 
 **From a release (recommended)**
 
-1. Download `claude-account-switcher-vX.Y.Z.zip` from [Releases](https://github.com/wilinz/claude-web-toolbox/releases/latest) and unzip it
+1. Download `claude-account-switcher-vX.Y.Z.zip` from [Releases](https://github.com/wilinz/claude_account_manager/releases/latest) and unzip it
 2. Chrome → `chrome://extensions` → enable **Developer mode** (top right)
 3. **Load unpacked** → select the unzipped folder
 

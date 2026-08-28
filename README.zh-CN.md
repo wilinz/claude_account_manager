@@ -1,8 +1,8 @@
 # Claude 账号切换器
 
 <p>
-  <a href="https://github.com/wilinz/claude-web-toolbox/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/wilinz/claude-web-toolbox/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/wilinz/claude-web-toolbox/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/wilinz/claude-web-toolbox?label=release"></a>
+  <a href="https://github.com/wilinz/claude_account_manager/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/wilinz/claude_account_manager/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/wilinz/claude_account_manager/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/wilinz/claude_account_manager?label=release"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
@@ -32,7 +32,7 @@ MV3 + TypeScript + React + Vite + CRXJS。数据只存在本地，不发往任�
 
 **用发行版（推荐）**
 
-1. 从 [Releases](https://github.com/wilinz/claude-web-toolbox/releases/latest) 下载 `claude-account-switcher-vX.Y.Z.zip` 并解压
+1. 从 [Releases](https://github.com/wilinz/claude_account_manager/releases/latest) 下载 `claude-account-switcher-vX.Y.Z.zip` 并解压
 2. Chrome → `chrome://extensions` → 打开右上角「开发者模式」
 3. 「加载已解压的扩展程序」→ 选中解压出来的目录
 
