@@ -1,0 +1,29 @@
+{
+  "name": "claude-web-toolbox",
+  "displayName": "Claude Account Switcher",
+  "version": "0.1.0",
+  "description": "claude.ai 多账号管理：自动记录已登录账号，一键切换会话，登录页自动弹出账号选择",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "zip": "npm run build && cd dist && zip -r ../claude-account-switcher.zip ."
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.7.1",
+    "@types/chrome": "^0.1.29",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9"
+  }
+}

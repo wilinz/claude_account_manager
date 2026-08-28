@@ -1,0 +1,61 @@
+name: Release
+
+# 推一个 v* 标签就发版，比如：git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的标签，例如 v0.1.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # 标签和 package.json 的版本必须一致 —— manifest 的版本是从 package.json 来的，
+      # 对不上就会发出一个「标签写 v0.2.0、装上去却显示 0.1.0」的包
+      - name: Resolve version
+        id: v
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          PKG="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::标签 $TAG 与 package.json 的 $PKG 不一致，先改 package.json 再打标签"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "zip=claude-account-switcher-$TAG.zip" >> "$GITHUB_OUTPUT"
+
+      - run: npm run build
+
+      # 从 dist 内部打包：Chrome 应用商店和「加载已解压」都要求 manifest.json 在压缩包根部，
+      # 不能多一层 dist/ 目录
+      - name: Pack
+        run: cd dist && zip -qr "../${{ steps.v.outputs.zip }}" .
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.v.outputs.tag }}"
+          ZIP="${{ steps.v.outputs.zip }}"
+          # 重跑同一个标签时 release 已经存在，那就只把包换掉
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            gh release create "$TAG" "$ZIP" --title "$TAG" --generate-notes
+          fi

@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # build 脚本自带 tsc --noEmit，类型错误会在这里挡下
+      - run: npm run build
+
+      # 装载扩展前先确认产物齐全，缺一个 Chrome 就加载不起来
+      - name: Check bundle
+        run: |
+          test -f dist/manifest.json
+          node -e "const m=require('./dist/manifest.json');
+            for (const f of [m.background?.service_worker, m.action?.default_popup, m.options_page])
+              if (!f || !require('fs').existsSync('dist/'+f)) throw new Error('缺少产物: '+f)
+            console.log('manifest v'+m.version+' 产物齐全')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist
