@@ -1,4 +1,4 @@
-# Claude 账号切换器
+# Claude Account Switcher
 
 <p>
   <a href="https://github.com/wilinz/claude-web-toolbox/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/wilinz/claude-web-toolbox/actions/workflows/ci.yml/badge.svg"></a>
@@ -6,252 +6,252 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
-**中文** · [English](README.en.md)
+[中文](README.zh-CN.md) · **English**
 
-claude.ai 多账号管理 Chrome 扩展。在同一个浏览器里保存多份登录会话，点一下换人，不用反复收验证码。
+A Chrome extension for juggling several claude.ai accounts in one browser. Keep multiple login sessions side by side and switch with a click — no more waiting on verification emails.
 
-MV3 + TypeScript + React + Vite + CRXJS。数据只存在本地，不发往任何第三方。
+MV3 + TypeScript + React + Vite + CRXJS. Everything stays on your machine; nothing is sent to a third party.
 
-![弹窗与用量总览](docs/screenshot.png)
+![Popup and usage overview](docs/screenshot-en.png)
 
-> 左：各账号的配额总览，逐个账号用它自己的会话查询，全程不改动浏览器里当前登录的账号。右：弹窗里的账号列表，带续订日与会话状态。（截图中账号信息已打码）
+> Left: per-account quota overview — each account is queried with its own session, and the account you are logged in as never changes. Right: the popup's account list, with renewal dates and session status. (Account details in the screenshot are redacted.)
 
-## 功能
+## Features
 
-- **自动记录** —— 在 claude.ai 登录成功后，自动把该账号的会话 cookie 快照存到本地（可关）
-- **一键切换** —— 点列表里的账号直接换会话，切换失败会自动回滚到切换前的状态
-- **输入框下拉** —— 登录页点一下邮箱框，就在框下方弹出已存账号，像浏览器密码管理器那样
-- **添加账号** —— 存好当前会话并只在本地登出，进登录页加新号，原账号随时切回
-- **退出拦截** —— 点 claude.ai 自己的「退出登录」时先问一句：真注销，还是只在本地退出
-- **用量总览** —— 不切换会话就能看到每个账号的 5 小时 / 7 天配额用了多少
-- **订阅续订日** —— 记下每个账号的续订日与渠道，按官网 / App Store / Google Play 各自的规则推算下次续订
-- **导入导出** —— 导出为 JSON 备份，可用密码 AES 加密；导入导出都能按项勾选带哪些内容
-- **中英双语** —— 默认跟随浏览器语言，也能在设置里固定成中文或英文
+- **Automatic capture** — after a successful login on claude.ai, the account's session cookies are snapshotted locally (can be turned off)
+- **One-click switching** — click an account to swap sessions; a failed switch rolls back to the previous state
+- **Inline dropdown** — click the email field on the login page and your saved accounts appear right under it, like a password manager
+- **Add account** — save the current session, log out *locally only*, sign in as someone else, and switch back whenever you want
+- **Logout interception** — when you hit claude.ai's own "Log out", the extension asks first: really sign out, or just drop the local session?
+- **Usage overview** — see each account's 5-hour / 7-day quota without switching sessions
+- **Renewal dates** — record each account's renewal day and store, and get the next renewal computed under the right rules for Web / App Store / Google Play
+- **Import & export** — JSON backups, optionally AES-encrypted with a password; both directions let you pick which parts to include
+- **English and Chinese** — follows your browser language by default, or pin either one in settings
 
-## 安装
+## Install
 
-**用发行版（推荐）**
+**From a release (recommended)**
 
-1. 从 [Releases](https://github.com/wilinz/claude-web-toolbox/releases/latest) 下载 `claude-account-switcher-vX.Y.Z.zip` 并解压
-2. Chrome → `chrome://extensions` → 打开右上角「开发者模式」
-3. 「加载已解压的扩展程序」→ 选中解压出来的目录
+1. Download `claude-account-switcher-vX.Y.Z.zip` from [Releases](https://github.com/wilinz/claude-web-toolbox/releases/latest) and unzip it
+2. Chrome → `chrome://extensions` → enable **Developer mode** (top right)
+3. **Load unpacked** → select the unzipped folder
 
-**从源码构建**
+**From source**
 
 ```bash
 npm install
-npm run build   # 产物在 dist/，加载这个目录
+npm run build   # output lands in dist/ — load that folder
 ```
 
-## 开发
+## Development
 
 ```bash
-npm run dev     # HMR，产物同样在 dist/
-npm run build   # 生产构建（先跑 tsc --noEmit）
-npm run zip     # 打包成 claude-account-switcher.zip
+npm run dev     # HMR; output also in dist/
+npm run build   # production build (runs tsc --noEmit first)
+npm run zip     # packs dist/ into claude-account-switcher.zip
 ```
 
-改了 service worker 的代码要在 `chrome://extensions` 重新加载扩展才生效。弹窗每次打开都重读文件、SW 不会——所以弹窗里内置了构建戳比对，两边对不上会在顶部压一条橙色横幅提醒你重载。
+Changes to the service worker only take effect after you reload the extension on `chrome://extensions`. The popup re-reads its files every time it opens, the service worker does not — so the popup compares build stamps with the background and shows an orange banner when they disagree.
 
-发版：改 `package.json` 的 `version`，然后推标签，CI 会构建并把 zip 传到 Release。
+Releasing: bump `version` in `package.json`, then push a tag. CI builds and uploads the zip to the release.
 
 ```bash
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
-## 工作方式
+## How it works
 
-| 模块 | 文件 | 职责 |
+| Module | File | Responsibility |
 | --- | --- | --- |
-| Service Worker | `src/background/index.ts` | 捕获/切换/校验会话，消息路由，自动弹窗触发 |
-| Content Script | `src/content/index.tsx` | 输入框绑定、邮箱填充与记录、站点数据自愈 |
-| 下拉组件 | `src/content/Autofill.tsx` | 锚定在邮箱输入框下方的账号列表 |
-| 退出询问 | `src/content/LogoutChoice.tsx` | 拦下站点的退出登录，问清是注销还是本地退出 |
-| 站点数据 | `src/lib/siteData.ts` | 清除账号相关缓存，保留设备绑定 |
-| Popup | `src/popup/App.tsx` | 账号列表、备注、订阅信息、导入导出 |
-| 设置页 | `src/settings/App.tsx` | 全部开关与语言 |
-| 用量页 | `src/usage/App.tsx` | 各账号配额总览 |
-| Cookie 层 | `src/lib/cookies.ts` | claude.ai 域 cookie 的读取 / 清空 / 写回 |
-| 身份识别 | `src/lib/claudeApi.ts` | 调 `/api/account` 拿邮箱与 uuid |
-| 用量 | `src/lib/usage.ts` | 借 declarativeNetRequest 换请求头读用量 |
-| 续订推算 | `src/lib/billing.ts` | 三个平台各自的短月规则 |
-| 导入导出 | `src/lib/transfer.ts` | 导出打包、导入校验、合并策略与内容项裁剪 |
-| 加密 | `src/lib/crypto.ts` | PBKDF2-SHA256 + AES-GCM-256 |
-| 文案 | `src/i18n/` | 中英两份词表、语言解析与切换 |
+| Service worker | `src/background/index.ts` | Capture / switch / validate sessions, message routing, prompt triggers |
+| Content script | `src/content/index.tsx` | Field binding, email fill and capture, site-data self-healing |
+| Dropdown | `src/content/Autofill.tsx` | Account list anchored under the email input |
+| Logout prompt | `src/content/LogoutChoice.tsx` | Intercepts the site's logout and asks which kind you meant |
+| Site data | `src/lib/siteData.ts` | Clears account-scoped caches while keeping device binding |
+| Popup | `src/popup/App.tsx` | Account list, notes, billing, import/export |
+| Settings page | `src/settings/App.tsx` | All the toggles, plus language |
+| Usage page | `src/usage/App.tsx` | Quota overview across accounts |
+| Cookie layer | `src/lib/cookies.ts` | Read / clear / restore cookies on the claude.ai domain |
+| Identity | `src/lib/claudeApi.ts` | Calls `/api/account` for email and uuid |
+| Usage | `src/lib/usage.ts` | Reads quota by rewriting one request's headers via declarativeNetRequest |
+| Renewals | `src/lib/billing.ts` | Per-platform short-month rules |
+| Transfer | `src/lib/transfer.ts` | Export bundling, import validation, merge strategies, part selection |
+| Crypto | `src/lib/crypto.ts` | PBKDF2-SHA256 + AES-GCM-256 |
+| Strings | `src/i18n/` | The two string tables, language resolution, and switching |
 
-### 为什么必须连站点数据一起换
+### Why site data has to be swapped too
 
-`sessionKey` 是 httpOnly cookie，凭证本身不在 localStorage 里。但 claude.ai 会把「这份缓存属于哪个账号」写在页面侧：
+`sessionKey` is an httpOnly cookie, so the credential itself never lives in localStorage. But claude.ai records *which account a cache belongs to* on the page side:
 
-| 位置 | 键 | 内容 |
+| Where | Key | Contents |
 | --- | --- | --- |
-| localStorage | `rq-cache-confirmed-account` | react-query 缓存所属账号 uuid |
-| localStorage | `__qk_hint_account_uuid` | 账号 uuid 提示 |
-| localStorage | `ccd-sync-owner` | 同步状态所属账号 |
-| IndexedDB | `keyval-store` → `react-query-cache` | 整份查询缓存 |
+| localStorage | `rq-cache-confirmed-account` | uuid of the account owning the react-query cache |
+| localStorage | `__qk_hint_account_uuid` | Account uuid hint |
+| localStorage | `ccd-sync-owner` | Account owning the sync state |
+| IndexedDB | `keyval-store` → `react-query-cache` | The whole query cache |
 
-只换 cookie 不清这些，SPA 会带着上一个账号的身份去打接口，403 之后按未登录处理，**直接跳 `/login`**——看起来就像切换失败。
+Swap only the cookies and the SPA calls the API carrying the previous account's identity, gets a 403, treats you as signed out, and **redirects to `/login`** — which looks exactly like a failed switch.
 
-清理是在页面上下文里做的（content script），因为必须**精确保留设备级身份**，用 `chrome.browsingData` 一把清 IndexedDB 会连带抹掉：
+The cleanup runs in the page context (content script) because device-level identity has to be **preserved precisely**. Wiping IndexedDB wholesale with `chrome.browsingData` would also destroy:
 
-- `claude-device-binding` —— 设备绑定密钥
-- `x-ark-arid-db` / localStorage 的 `x-ark-arid-*` —— 站点证明
+- `claude-device-binding` — the device binding key
+- `x-ark-arid-db` / `x-ark-arid-*` in localStorage — site attestation
 
-采用「保留白名单」而不是「清除黑名单」，这样 claude.ai 新增账号相关的键时不会漏。
+It is written as a *keep* list rather than a *delete* list, so nothing is missed when claude.ai adds new account-scoped keys.
 
-切换时没开着 claude.ai 标签页也没关系：content script 在下次加载时会比对缓存里的账号 uuid 和当前会话，对不上就地清理并重载一次（有 `sessionStorage` 标记防循环）。
+You do not need an open claude.ai tab at switch time: on its next load the content script compares the cached account uuid against the current session, and if they disagree it cleans up in place and reloads once (guarded by a `sessionStorage` flag against loops).
 
-### 账号是怎么被识别的
+### How accounts are identified
 
-身份来自 `GET /api/account`（返回 `uuid` / `email_address` / `full_name` / `memberships`），依次退到 `/api/bootstrap` 和 `/api/organizations`。
+Identity comes from `GET /api/account` (returns `uuid` / `email_address` / `full_name` / `memberships`), falling back to `/api/bootstrap` and then `/api/organizations`.
 
-> `/api/auth/current_account` 已经下线，现在返回 **404**，不要再用。
+> `/api/auth/current_account` has been retired and now returns **404**. Do not use it.
 
-主键优先取服务端返回的账号 `uuid`，其次 `email:<邮箱>`，最后用 `org:<组织 uuid>` 兜底。登录页先记下邮箱、登录成功后再拿到 uuid 的情况，会由 `mergeEmailPlaceholder` 合并成一条记录。
+The primary key is the server-side account `uuid` when available, then `email:<address>`, and finally `org:<organization uuid>`. When the login page records an email first and the uuid only arrives after a successful login, `mergeEmailPlaceholder` folds the two into one record.
 
-### 切换流程
+### The switch sequence
 
-1. 先把**当前**会话快照存好（否则切走就找不回来了）
-2. 清空 `claude.ai` 域下全部 cookie
-3. 写回目标账号的快照（跳过已过期的条目，`hostOnly` 的 cookie 不带 `domain` 写）
-4. 调一次 `/api/account` 校验会话是否还有效；失效则标记 `sessionInvalid` 并**回滚到切换前的 cookie**
-5. 让每个 claude.ai 标签页清掉上个账号的页面缓存
-6. 刷新所有 claude.ai 标签页
+1. Snapshot the **current** session first (otherwise it is gone once you switch away)
+2. Clear every cookie on the `claude.ai` domain
+3. Restore the target account's snapshot (skipping expired entries; `hostOnly` cookies are written without a `domain`)
+4. Call `/api/account` once to check the session is still good; if not, flag it `sessionInvalid` and **roll back to the pre-switch cookies**
+5. Tell every claude.ai tab to drop the previous account's page cache
+6. Reload all claude.ai tabs
 
-## 添加账号
+## Adding an account
 
-弹窗里的「＋ 添加账号」，或登录页下拉最底部的「添加其他账号」，做三件事：
+"＋ Add account" in the popup, or "Add another account" at the bottom of the login-page dropdown, does three things:
 
-1. 把当前会话完整存进对应账号
-2. **只清本地 cookie**——绝不调用 claude.ai 的登出接口，否则服务端会吊销会话，刚存的快照就白存了
-3. 打开登录页（复用已有标签页），并跳过这一次的账号选择弹窗
+1. Saves the current session in full under its account
+2. **Clears local cookies only** — it never calls claude.ai's logout endpoint, which would revoke the session server-side and render the snapshot you just took worthless
+3. Opens the login page (reusing an existing tab) and suppresses the account prompt for that one visit
 
-登录成功后自动保存被记成一个新账号，原账号仍在列表里，随时切回。
+After you log in, auto-capture records it as a new account. The original stays in the list, ready to switch back to.
 
-## 自动保存
+## Auto-capture
 
-三个触发点，都受设置里的「登录 / 会话变化时自动保存当前会话」开关控制：
+Three triggers, all governed by the "save the current session on login / session change" setting:
 
-| 触发 | 时机 | 防抖 |
+| Trigger | When | Debounce |
 | --- | --- | --- |
-| `cookies.onChanged` | `sessionKey` 新增或变化（登录、会话续期） | 1.5s |
-| `tabs.onUpdated` | claude.ai 标签页加载完成 | 0.8s |
-| `alarms` | 每 30 分钟刷新一次，避免快照过旧 | — |
+| `cookies.onChanged` | `sessionKey` added or changed (login, session renewal) | 1.5s |
+| `tabs.onUpdated` | A claude.ai tab finishes loading | 0.8s |
+| `alarms` | Every 30 minutes, so snapshots do not go stale | — |
 
-关掉开关后这三个都不再触发，但下面这些**仍然会写入快照**，因为它们是用户明确发起的操作：
+Turning the setting off disables all three, but the following **still write snapshots**, because they are things you explicitly asked for:
 
-- 弹窗里的「保存当前会话」按钮
-- 切换账号前（先存当前会话，否则切走就找不回来了）
-- 「退出当前账号」前
-- 导出前（否则刚登录的账号会导出成空快照）
+- The "Save current session" button in the popup
+- Before switching accounts (the current session is saved first, or it is lost)
+- Before "Log out of current account"
+- Before exporting (otherwise a freshly logged-in account would export as an empty snapshot)
 
-## 用量总览
+## Usage overview
 
-用量接口要带对应账号的 cookie 才能读，但**为了看一眼用量把浏览器的会话换掉是不可接受的**。所以这里不动 cookie 罐：用 `declarativeNetRequestWithHostAccess` 在请求发出的瞬间改写 Cookie 请求头，只作用于扩展自己发的那一个请求，页面里正在用的会话完全不受影响。
+The usage endpoint needs that account's cookies, but **swapping the browser's session just to peek at a quota is not acceptable**. So the cookie jar is left alone: `declarativeNetRequestWithHostAccess` rewrites the Cookie header on that single outgoing request, which affects only the extension's own call. The session the page is using is untouched.
 
-免费版账号没有配额可言，接口正常返回但没有窗口数据——这种情况显示成「无配额」，不算错误。
+Free accounts have no quota to speak of — the endpoint answers fine but carries no windows. That is shown as "no quota", not as an error.
 
-## 订阅续订日
+## Renewal dates
 
-存的是**平台上显示的那个续订日**，不是购买日期。从购买时间反推走不通：平台按账单地址所在时区算，不是按你的本地时区（实测一例：Google Play 下单 8/17 02:50 UTC+8，Play 里显示 9/16 续订——账单地址在太平洋时区，那边是 8/16 11:50）。让用户照抄平台已经算好的日期，时区偏移就一次性烘进了锚点。
+What gets stored is **the renewal date the platform shows you**, not the purchase date. Deriving it from the purchase time does not work: platforms compute it in the billing address's time zone, not yours. (Observed case: a Google Play order at 08-17 02:50 UTC+8 shows a 09-16 renewal in Play — the billing address is on Pacific time, where it was 08-16 11:50.) Copying the date the platform already resolved bakes the offset into the anchor once and for all.
 
-续订日在 29 号及以后时，三个平台的短月规则不一样，界面上会提示：
+For renewal days on the 29th or later the three platforms disagree, and the UI says so:
 
-| 渠道 | 1/31 起订之后 |
+| Store | Starting 01-31 |
 | --- | --- |
-| 官网（Stripe） | 2/28 → **3/31** → 4/30，锚点保留 |
-| App Store | 同上，锚点保留 |
-| Google Play | 2/28 → **3/28** → 4/28，锚点永久下移 |
+| Web (Stripe) | 02-28 → **03-31** → 04-30; the anchor is kept |
+| App Store | Same; the anchor is kept |
+| Google Play | 02-28 → **03-28** → 04-28; the anchor moves down permanently |
 
-28 号及以前三套规则完全一致，也就不提示。
+On the 28th or earlier all three rules agree, so no note is shown.
 
-## 导入 / 导出
+## Import & export
 
-弹窗底部：勾选账号后「导出所选」，或直接「导出全部」。导入导出都会先弹一个面板，勾选这次要带哪几类内容：
+At the bottom of the popup: select accounts and "Export selected", or just "Export all". Both directions open a panel first, where you tick which kinds of data to carry:
 
-| 内容项 | 说明 |
+| Part | What it is |
 | --- | --- |
-| 会话 cookie | 登录凭证本身，能直接登进账号 |
-| 订阅信息 | 每月续订日与订阅渠道 |
-| 扩展设置 | 全部开关 |
+| Session cookies | The credential itself — enough to log straight into the account |
+| Billing | Monthly renewal date and store |
+| Settings | All the toggles |
 
-账号本身（邮箱、备注、身份）永远带，没有不带的选项。导入侧的面板**照着文件实际内容渲染**：文件里没有的类别置灰不给勾。没勾的类别在合并时**保留本地原值**，不会被空壳盖掉。
+The account itself (email, note, identity) always travels; there is no option to leave it out. On the import side the panel is **rendered from what the file actually contains**: categories the file lacks are greyed out. Parts you leave unticked **keep their local values** during the merge — they are never overwritten with blanks.
 
-「加密导出」**默认勾选**（存在设置里，跨会话保持），此时必须填密码才能导出。要明文导出得先手动取消勾选，并再确认一次。
+"Encrypted export" is **on by default** (stored in settings, persisted across sessions), and a password is required while it is on. Exporting in the clear takes an explicit uncheck plus one more confirmation.
 
-同名账号的处理策略在导入面板里选：
+The strategy for accounts that already exist locally is chosen in the import panel:
 
-| 策略 | 行为 |
+| Strategy | Behavior |
 | --- | --- |
-| `merge`（默认） | 同 id 账号只在导入的会话**更新**时才覆盖，不会用旧快照顶掉可用会话 |
-| `overwrite` | 同 id 一律用导入的数据覆盖 |
-| `replace` | 清空本地全部账号后再写入（会二次确认） |
+| `merge` (default) | An existing id is overwritten only when the incoming session is **newer**, so a stale snapshot never clobbers a working session |
+| `overwrite` | An existing id is always replaced with the imported data |
+| `replace` | Wipes all local accounts, then writes (asks for confirmation) |
 
-导入文件是外部输入，全部字段都过 `sanitizeAccount` 校验：非法条目被计数忽略，**cookie 的 domain 不属于 claude.ai 的会被直接丢弃**，避免一个构造过的备份文件往任意站点写凭证。设置同样逐键按 `DEFAULT_SETTINGS` 收敛，认不出的键丢掉、类型不对的退回默认值。
+The imported file is untrusted input, so every field goes through `sanitizeAccount`: invalid entries are counted and dropped, and **cookies whose domain is not claude.ai are discarded outright**, so a crafted backup cannot write credentials for arbitrary sites. Settings are narrowed key-by-key against `DEFAULT_SETTINGS`: unknown keys are dropped, wrongly typed ones fall back to the default.
 
-### 加密格式
+### Encryption format
 
 ```
 PBKDF2-SHA256(password, salt=16B random, iterations=250000) -> AES-GCM-256 key
-密文 = AES-GCM(iv=12B random, JSON.stringify(bundle))
+ciphertext = AES-GCM(iv=12B random, JSON.stringify(bundle))
 ```
 
-salt / iv / 密文以 base64 存在文件里，明文可见的只有 `exportedAt` 和 `accountCount`（方便确认拿对了文件）。AES-GCM 自带认证，密码错或文件被篡改都会在解密时报「密码错误，或文件已损坏」。**密码丢失无法恢复。**
+Salt, iv, and ciphertext are stored base64 in the file. The only plaintext fields are `exportedAt` and `accountCount`, so you can confirm you grabbed the right file. AES-GCM is authenticated, so a wrong password or a tampered file both surface as "wrong password, or the file is corrupted". **A lost password cannot be recovered.**
 
-## 界面语言
+## Interface language
 
-默认「跟随浏览器」：浏览器显示语言是中文（`zh`、`zh-CN`、`zh-TW`…）就用中文，其余一律英文。想固定住的话，设置页第一项可以直接选中文或 English，改完所有已打开的页面立即跟着变，不用刷新。
+The default is "follow browser": Chinese when the browser's display language is Chinese (`zh`, `zh-CN`, `zh-TW`, …), English otherwise. To pin it, the first setting on the settings page offers 中文 and English — every open page follows immediately, no reload needed.
 
-文案放在 `src/i18n/`：`zh.ts` 是原本，`en.ts` 用 `Strings` 类型约束——**少一个键、或者带参数的文案参数个数对不上，都在编译期就挡下来**，不会等到界面上冒出一句原文才发现。带参数的文案写成函数而不是 `{n}` 这种占位符，参数的个数和类型跟着 TypeScript 走。
+Strings live in `src/i18n/`. `zh.ts` is the source of truth and `en.ts` is typed against it as `Strings`, so **a missing key — or a parameterized string whose argument count drifts — fails to compile** rather than surfacing as an untranslated line in the UI. Parameterized strings are functions rather than `{n}` placeholders, which puts their arity and types under TypeScript's control.
 
-用量结果里存的是窗口的**键**（`five_hour`、`seven_day`…）而不是翻译好的文案，因为这份结果会进缓存——存死了文案，换语言之后缓存里的旧文案就跟着一起显示出来了。
+Usage results store the window **key** (`five_hour`, `seven_day`, …) rather than a translated label, because those results are cached: baking in the label would leave the old language showing after a switch.
 
-## 权限说明
+## Permissions
 
-| 权限 | 用途 |
+| Permission | Why |
 | --- | --- |
-| `cookies` + `host_permissions` | 读写 claude.ai 的会话 cookie，这是切换功能的核心 |
-| `storage` | 把账号快照存在 `chrome.storage.local` |
-| `tabs` | 切换后刷新 claude.ai 标签页、向页面发送弹窗消息 |
-| `alarms` | 每 30 分钟刷新一次当前账号的快照，避免存的会话过旧 |
-| `scripting` | 注册页面世界的退出拦截脚本 |
-| `declarativeNetRequestWithHostAccess` | 只为读用量的那一个请求改写 Cookie 头 |
+| `cookies` + `host_permissions` | Read and write claude.ai session cookies — the core of switching |
+| `storage` | Keeps account snapshots in `chrome.storage.local` |
+| `tabs` | Reload claude.ai tabs after a switch, send prompt messages to pages |
+| `alarms` | Refresh the current account's snapshot every 30 minutes so it does not go stale |
+| `scripting` | Registers the main-world logout interception script |
+| `declarativeNetRequestWithHostAccess` | Rewrites the Cookie header for the usage request alone |
 
-不需要 `browsingData`：站点数据的清理由 content script 在页面上下文里精确完成。
+`browsingData` is deliberately not requested: site-data cleanup is done precisely by the content script in the page context.
 
-## 常见问题
+## FAQ
 
-### 切换后跳回登录页
+### It bounces back to the login page after switching
 
-先看扩展给出的失败原因（页面底部的黑色提示条，长文案停留 15 秒）。最常见的两种：
+Check the reason the extension reports (a dark toast at the bottom of the page; long messages stay for 15 seconds). The two common causes:
 
-**1. 在 claude.ai 上点了「退出登录」。** 那个操作会让**服务端吊销**这份会话，保存的 cookie 当场作废，写回去也没用。
+**1. You clicked "Log out" on claude.ai.** That revokes the session **server-side**; the saved cookies are void immediately and restoring them changes nothing.
 
-> 切换账号请直接点扩展里的账号，或用弹窗里的「退出当前账号」——后者只清本地 cookie，不碰服务端，快照仍然有效。开着「退出拦截」的话，点站点自己的退出登录时扩展会先问你一句。
+> Switch accounts by clicking one in the extension, or use "Log out of current account" in the popup — that clears local cookies only, leaves the server alone, and keeps the snapshot usable. With logout interception on, clicking the site's own logout will ask you first.
 
-**2. 上个账号的页面缓存没清干净。** 打开设置里的「切换时清除上个账号的页面缓存」（默认开）。
+**2. The previous account's page cache was not cleared.** Turn on "clear the previous account's page cache when switching" in settings (on by default).
 
-### Google / Apple 登录的账号
+### Accounts that sign in with Google / Apple
 
-这类账号没有密码，也不走邮箱验证码，往邮箱框里填地址没有意义。扩展会从页面的 `lastLoginMethod` 记下登录方式，会话失效时直接帮你点「Continue with Google」/「Continue with Apple」，列表里也会显示「用 Google 重新登录」而不是「填入邮箱」。
+These accounts have no password and no email code, so typing an address into the email field accomplishes nothing. The extension records the login method from the page's `lastLoginMethod` and, when the session expires, clicks "Continue with Google" / "Continue with Apple" for you. The list shows "sign in again with Google" instead of "fill in email".
 
-### 账号显示成组织名（`x@y.com's Organization`）
+### An account shows up as an organization name (`x@y.com's Organization`)
 
-旧版本用已下线的 `/api/auth/current_account`，只能退到 `/api/organizations` 拿组织名。升级后启动时会自动从组织名里把邮箱补回去；重新登录一次则会拿到完整的账号信息。
+Older versions used the now-retired `/api/auth/current_account` and could only fall back to `/api/organizations` for an org name. After upgrading, startup recovers the email from the org name automatically; logging in again fetches the full account details.
 
-### 保存成功了，但什么都没发生
+### It says saved, but nothing happened
 
-多半是 service worker 还在跑旧代码——它不像弹窗那样每次打开重读文件。弹窗顶部出现橙色横幅时点一下「重新加载扩展」即可。
+Almost always the service worker still running old code — unlike the popup, it does not re-read its files on every open. When the orange banner appears at the top of the popup, click "Reload extension".
 
-## 注意
+## Caveats
 
-- **会话 cookie 等价于登录凭证**，明文存在 `chrome.storage.local` 里。共用电脑请谨慎使用。
-- 不填密码导出的备份是**明文凭证**，别提交进 git、别丢进网盘或聊天工具。需要传输时务必填密码。
-- 扩展不发送任何数据到第三方，所有请求只打 `claude.ai` 自身接口。
-- claude.ai 可能调整登录页 DOM 或接口返回结构；邮箱选择器集中在 `src/content/index.tsx` 的 `EMAIL_SELECTORS`，身份解析集中在 `src/lib/claudeApi.ts`，改起来只需要动这两处。
+- **Session cookies are login credentials.** They are stored in plaintext in `chrome.storage.local`. Be careful on a shared computer.
+- A backup exported without a password is **plaintext credentials**. Do not commit it to git, upload it to cloud storage, or paste it into a chat. Always set a password when the file has to travel.
+- The extension sends nothing to third parties; every request goes to claude.ai itself.
+- claude.ai may change the login page DOM or its API shapes. Email selectors live in `EMAIL_SELECTORS` in `src/content/index.tsx` and identity parsing in `src/lib/claudeApi.ts` — those two places are all you need to touch.
 
-## 许可证
+## License
 
 [MIT](LICENSE) © wilinz
 
-本项目与 Anthropic 无关，未获其背书。
+Not affiliated with or endorsed by Anthropic.
