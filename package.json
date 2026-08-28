@@ -1,7 +1,7 @@
 {
   "name": "claude_account_manager",
   "displayName": "Claude Account Manager",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Manage several claude.ai accounts in one browser: sessions are captured automatically, switch with one click, and saved accounts appear on the login page.",
   "type": "module",
   "private": true,

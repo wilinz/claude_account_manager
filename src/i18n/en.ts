@@ -259,7 +259,7 @@ export const en: Strings = {
     ssoRelogin: (sso: string) => `Sign in again with ${sso}`,
     fillEmail: 'Fill in email',
     fillOnly: 'Email only',
-    fillOnlyTitle: 'Just fill the field, do not switch accounts (Shift+Enter)',
+    fillOnlyTitle: 'Just fill the field for the email-code flow, without switching accounts (Shift+Enter)',
     addOther: 'Add another account',
     addOtherHint: 'Saves the current session first, then opens the login page',
     ssoClicked: (prefix: string, sso: string) =>

@@ -233,7 +233,9 @@ salt / iv / 密文以 base64 存在文件里，明文可见的只有 `exportedAt
 
 ### Google / Apple 登录的账号
 
-这类账号没有密码，也不走邮箱验证码，往邮箱框里填地址没有意义。扩展会从页面的 `lastLoginMethod` 记下登录方式，会话失效时直接帮你点「Continue with Google」/「Continue with Apple」，列表里也会显示「用 Google 重新登录」而不是「填入邮箱」。
+这类账号没有密码，但**照样能走邮箱验证码登录**——claude.ai 会把验证码发到这个邮箱，所以填邮箱是有意义的，两条路都通。
+
+扩展会从页面的 `lastLoginMethod` 记下登录方式，点这类账号时默认帮你点「Continue with Google」/「Continue with Apple」，通常这条更快，列表里也显示成「用 Google 重新登录」。想走验证码的话，用右边的**「仅填邮箱」**按钮（或 Shift+Enter），它会把邮箱填进登录框，不碰当前会话。
 
 ### 账号显示成组织名（`x@y.com's Organization`）
 

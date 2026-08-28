@@ -252,7 +252,7 @@ export const zh = {
     ssoRelogin: (sso: string) => `用 ${sso} 重新登录`,
     fillEmail: '填入邮箱',
     fillOnly: '仅填邮箱',
-    fillOnlyTitle: '只把邮箱填进输入框，不切换账号（Shift+Enter）',
+    fillOnlyTitle: '只把邮箱填进输入框，走验证码登录，不切换账号（Shift+Enter）',
     addOther: '添加其他账号',
     addOtherHint: '先保存当前会话，再去登录新账号',
     ssoClicked: (prefix: string, sso: string) => `${prefix}这个账号用 ${sso} 登录，已为你点击对应按钮`,

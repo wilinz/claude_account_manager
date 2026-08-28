@@ -266,9 +266,13 @@ export function Autofill({ accounts, input, onClose, onToast, onFillEmail, onUse
               ) : null}
             </button>
 
-            {/* 会话可用的账号默认点了就切走，留一个只填邮箱的出口：
-                有时候只是想拿这个邮箱去走一次正常登录，不该动当前会话 */}
-            {usable && account.email && (
+            {/*
+              两种情况都需要这个出口，所以只看有没有邮箱：
+              · 会话可用的账号，点一下就切走了，但有时只是想拿这个邮箱走一次正常登录
+              · Google / Apple 账号，主按钮会去点第三方登录，可这类账号同样能收
+                claude.ai 发到该邮箱的验证码 —— 不给这个口子就等于把那条路堵死了
+            */}
+            {account.email && (
               <button
                 className="autofill-fill"
                 disabled={busy !== null}

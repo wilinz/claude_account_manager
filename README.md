@@ -233,7 +233,9 @@ Check the reason the extension reports (a dark toast at the bottom of the page; 
 
 ### Accounts that sign in with Google / Apple
 
-These accounts have no password and no email code, so typing an address into the email field accomplishes nothing. The extension records the login method from the page's `lastLoginMethod` and, when the session expires, clicks "Continue with Google" / "Continue with Apple" for you. The list shows "sign in again with Google" instead of "fill in email".
+These accounts have no password, but they **can still sign in with an email code** — claude.ai sends the code to that address, so filling in the email is useful. Both routes work.
+
+The extension records the login method from the page's `lastLoginMethod` and, when you click such an account, presses "Continue with Google" / "Continue with Apple" for you — usually the faster route, and the list labels it "Sign in again with Google". For the code flow instead, use the **"Email only"** button on the right (or Shift+Enter): it fills the login field without touching the current session.
 
 ### An account shows up as an organization name (`x@y.com's Organization`)
 
